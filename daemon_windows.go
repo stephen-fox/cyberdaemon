@@ -6,7 +6,6 @@ import (
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"
 	"golang.org/x/sys/windows/svc/mgr"
-	"log"
 	"os"
 	"os/signal"
 	"strconv"
@@ -190,11 +189,7 @@ func (o *windowsDaemon) BlockAndRun(logic ApplicationLogic) error {
 		return err
 	}
 
-	log.Println("cb - starting")
-
 	if isInteractive {
-		log.Println("interactive")
-
 		err = logic.Start()
 		if err != nil {
 			return err
@@ -208,12 +203,8 @@ func (o *windowsDaemon) BlockAndRun(logic ApplicationLogic) error {
 
 		signal.Stop(interrupts)
 
-		log.Println("interrupted")
-
 		return logic.Stop()
 	}
-
-	log.Println("headless")
 
 	wrapper := serviceWrapper{
 		name:     o.config.Name,
@@ -225,8 +216,6 @@ func (o *windowsDaemon) BlockAndRun(logic ApplicationLogic) error {
 	if err != nil {
 		return err
 	}
-
-	log.Println("cb - done stop")
 
 	return nil
 }
