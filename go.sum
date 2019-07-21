@@ -1,0 +1,6 @@
+github.com/kardianos/service v1.0.0 h1:HgQS3mFfOlyntWX8Oke98JcJLqt1DBcHR4kxShpYef0=
+github.com/kardianos/service v1.0.0/go.mod h1:8CzDhVuCuugtsHyZoTvsOBuvonN/UDBvl0kH+BUxvbo=
+github.com/stephen-fox/launchctlutil v1.1.0 h1:rP4476CDy8CQFntHcfxIqHoYLmfK9OP9wOUqq2GCC9o=
+github.com/stephen-fox/launchctlutil v1.1.0/go.mod h1:6T2s/vDUsaN+VK51Hyc+4hRC6PMg9U+FxzyhHu3wgXo=
+golang.org/x/sys v0.0.0-20190204203706-41f3e6584952 h1:FDfvYgoVsA7TTZSbgiqjAbfPbK47CNHdWl3h/PJtii0=
+golang.org/x/sys v0.0.0-20190204203706-41f3e6584952/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
