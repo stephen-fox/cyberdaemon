@@ -239,9 +239,9 @@ type serviceWrapper struct {
 }
 
 // runAndBlock based on windowsDaemon.Run() method by kardianos et al:
-// github.com/kardianos/service/service_windows.go
 //
-// commit: b1866cf76903d81b491fb668ba14f4b1322b2ca7
+//  github.com/kardianos/service in service_windows.go
+//  commit: b1866cf76903d81b491fb668ba14f4b1322b2ca7
 func (o *serviceWrapper) runAndBlock() error {
 	o.setStartStopError(nil)
 
@@ -264,9 +264,9 @@ func (o *serviceWrapper) runAndBlock() error {
 }
 
 // Execute based on windowsDaemon.Execute() method by kardianos et al:
-// github.com/kardianos/service/service_windows.go
 //
-// commit: b1866cf76903d81b491fb668ba14f4b1322b2ca7
+//  github.com/kardianos/service in service_windows.go
+//  commit: b1866cf76903d81b491fb668ba14f4b1322b2ca7
 func (o *serviceWrapper) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (bool, uint32) {
 	const cmdsAccepted = svc.AcceptStop|svc.AcceptShutdown
 
@@ -327,9 +327,9 @@ func NewDaemon(config Config) (Daemon, error) {
 }
 
 // stopAndWait based on stopAndWait by takama et al:
-// github.com/takama/daemon/daemon_windows.go
 //
-// commit: 7b0f9893e24934bbedef065a1768c33779951e7d
+//  github.com/takama/daemon in daemon_windows.go
+//  commit: 7b0f9893e24934bbedef065a1768c33779951e7d
 func stopAndWait(s *mgr.Service) error {
 	// First stop the service. Then wait for the service to
 	// actually stop before starting it.
@@ -365,9 +365,9 @@ func stopAndWait(s *mgr.Service) error {
 }
 
 // defaultServiceStopTimeout based on getStopTimeout by takama et al:
-// from github.com/takama/daemon/daemon_windows.go
 //
-// commit: 7b0f9893e24934bbedef065a1768c33779951e7d
+//  github.com/takama/daemon in daemon_windows.go
+//  commit: 7b0f9893e24934bbedef065a1768c33779951e7d
 func defaultServiceStopTimeout() time.Duration {
 	key, err := registry.OpenKey(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Control`, registry.READ)
 	if err != nil {
