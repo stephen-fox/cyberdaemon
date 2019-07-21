@@ -1,5 +1,7 @@
 package main
 
+// This is an example daemon. Run with '-h' for more information.
+
 import (
 	"flag"
 	"fmt"
@@ -7,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"runtime"
 	"time"
 
 	"github.com/stephen-sfox/cyberdaemon"
@@ -14,20 +17,25 @@ import (
 
 const (
 	appName     = "cyberdaemon-filewriter-example"
-	description = "An example daemon created by the cyberdaemon library."
+	description = "An example daemon implemented using the cyberdaemon library."
 
 	daemonCommandArg = "command"
 	example = "example.exe -" + daemonCommandArg
 
 	usage = appName + `
 
+[ABOUT]
+This is an example daemon implemented using the cyberdaemon library. It will
+update a file in the OS's temporary directory. This is '/tmp' on *nix, or
+'C:\Windows\Temp' (the value of the 'TEMP' environment variable) on Windows.
+
 [USAGE]
-Compile this application as an executable (if you are on Windows, make sure it
-has .exe as its suffix). You can then install it as a service by running:
+Compile this application as an executable (if you are on Windows, make sure the
+executable's name ends with .exe). You can then install it as a service
+by running:
 	'` + example + ` install'
 
-Once installed, it will create a temporary file in C:\\ and write the current
-time to it every few seconds. The service can be stopped or started by running:
+Once installed, the service can be stopped or started by running:
 	'` + example + ` stop'
 or:
 	'` + example + ` start'
@@ -37,15 +45,14 @@ The service can be uninstalled by running:
 )
 
 func main() {
-	exePath, err := os.Executable()
-	if err != nil {
-		log.Fatalln(err.Error())
+	defaultWorkDir := "/tmp"
+	if runtime.GOOS == "windows" {
+		defaultWorkDir = os.Getenv("TEMP")
 	}
 
-	defaultWorkDir := path.Join(path.Dir(exePath), "examples-output", appName)
+	defaultWorkDir = path.Join(defaultWorkDir, appName)
 
 	command := flag.String(daemonCommandArg, "", "The daemon command to execute")
-	workDir := flag.String("", defaultWorkDir, "Directory where files will be written")
 	help := flag.Bool("h", false, "Displays this help page")
 
 	flag.Parse()
@@ -55,12 +62,12 @@ func main() {
 		os.Exit(0)
 	}
 
-	err = os.MkdirAll(*workDir, 0755)
+	err := os.MkdirAll(defaultWorkDir, 0755)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
 
-	logFile, err := os.OpenFile(path.Join(*workDir, "filewriter.log"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	logFile, err := os.OpenFile(path.Join(defaultWorkDir, "filewriter.log"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
@@ -92,7 +99,7 @@ func main() {
 	log.SetOutput(io.MultiWriter(logFile, os.Stderr))
 
 	err = daemon.BlockAndRun(&logic{
-		dir:  *workDir,
+		dir:  defaultWorkDir,
 		stop: make(chan chan struct{}),
 	})
 	if err != nil {
