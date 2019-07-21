@@ -36,7 +36,7 @@ func (o *windowsDaemon) ExecuteCommand(command Command) (string, error) {
 		return "", o.stop()
 	}
 
-	return "", CommandError{
+	return "", &CommandError{
 		isUnknown: true,
 		command:   command,
 	}

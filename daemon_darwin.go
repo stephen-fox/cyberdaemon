@@ -76,7 +76,7 @@ func (o *darwinDaemon) ExecuteCommand(command Command) (string, error) {
 		return "", nil
 	}
 
-	return "", CommandError{
+	return "", &CommandError{
 		isUnknown: true,
 		command:   command,
 	}
