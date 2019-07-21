@@ -1,3 +1,6 @@
 # JetBrains.
 .idea/
 *.iml
+
+# Example output.
+examples-output/

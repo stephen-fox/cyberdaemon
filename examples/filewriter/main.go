@@ -42,7 +42,7 @@ func main() {
 		log.Fatalln(err.Error())
 	}
 
-	defaultWorkDir := path.Join(path.Dir(exePath), appName)
+	defaultWorkDir := path.Join(path.Dir(exePath), "examples-output", appName)
 
 	command := flag.String(daemonCommandArg, "", "The daemon command to execute")
 	workDir := flag.String("", defaultWorkDir, "Directory where files will be written")
