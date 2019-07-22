@@ -26,22 +26,24 @@ const (
 
 [ABOUT]
 This is an example daemon implemented using the cyberdaemon library. It will
-update a file in the OS's temporary directory. This is '/tmp' on *nix, or
-'C:\Windows\Temp' (the value of the 'TEMP' environment variable) on Windows.
+update a file every few seconds in the OS's temporary directory. This is
+'/tmp' on *nix, or 'C:\Windows\Temp' (the value of the 'TEMP' environment
+variable) on Windows.
 
-[USAGE]
-Compile this application as an executable (if you are on Windows, make sure the
-executable's name ends with .exe). You can then install it as a service
+Compile this application as an executable (make sure the executable's name ends
+with .exe if you are on Windows). You can then install it as a daemon
 by running:
 	'` + example + ` install'
 
-Once installed, the service can be stopped or started by running:
+Once installed, the daemon can be stopped or started by running:
 	'` + example + ` stop'
 or:
 	'` + example + ` start'
 
-The service can be uninstalled by running:
-	'` + example + ` uninstall'`
+The daemon can be uninstalled by running:
+	'` + example + ` uninstall'
+
+[USAGE]`
 )
 
 func main() {
@@ -58,7 +60,8 @@ func main() {
 	flag.Parse()
 
 	if *help {
-		fmt.Print(usage)
+		fmt.Println(usage)
+		flag.PrintDefaults()
 		os.Exit(0)
 	}
 
