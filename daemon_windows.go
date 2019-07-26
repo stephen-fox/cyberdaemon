@@ -27,13 +27,13 @@ func (o *windowsDaemon) ExecuteCommand(command Command) (string, error) {
 
 		return status.printableStatus(), nil
 	case Install:
-		return "", o.install()
+		return "", o.Install()
 	case Uninstall:
-		return "", o.uninstall()
+		return "", o.Uninstall()
 	case Start:
-		return "", o.start()
+		return "", o.Start()
 	case Stop:
-		return "", o.stop()
+		return "", o.Stop()
 	}
 
 	return "", &CommandError{
@@ -80,7 +80,7 @@ func (o *windowsDaemon) Status() (Status, error) {
 	return Unknown, nil
 }
 
-func (o *windowsDaemon) install() error {
+func (o *windowsDaemon) Install() error {
 	m, err := mgr.Connect()
 	if err != nil {
 		return err
@@ -115,7 +115,7 @@ func (o *windowsDaemon) install() error {
 	return nil
 }
 
-func (o *windowsDaemon) uninstall() error {
+func (o *windowsDaemon) Uninstall() error {
 	m, err := mgr.Connect()
 	if err != nil {
 		return err
@@ -141,7 +141,7 @@ func (o *windowsDaemon) uninstall() error {
 	return nil
 }
 
-func (o *windowsDaemon) start() error {
+func (o *windowsDaemon) Start() error {
 	m, err := mgr.Connect()
 	if err != nil {
 		return err
@@ -162,7 +162,7 @@ func (o *windowsDaemon) start() error {
 	return nil
 }
 
-func (o *windowsDaemon) stop() error {
+func (o *windowsDaemon) Stop() error {
 	m, err := mgr.Connect()
 	if err != nil {
 		return err

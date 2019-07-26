@@ -1,6 +1,7 @@
 package cyberdaemon
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,35 +13,15 @@ type darwinDaemon struct {
 	config launchctlutil.Configuration
 }
 
-func (o *darwinDaemon) Status() (Status, error) {
-	details, err := launchctlutil.CurrentStatus(o.config.GetLabel())
-	if err != nil {
-		return "", err
-	}
-
-	switch details.Status {
-	case launchctlutil.NotInstalled:
-		return NotInstalled, nil
-	case launchctlutil.NotRunning:
-		return Stopped, nil
-	case launchctlutil.Running:
-		return Running, nil
-	}
-
-	return Unknown, nil
-}
-
 func (o *darwinDaemon) ExecuteCommand(command Command) (string, error) {
-	if command == GetStatus {
+	switch command {
+	case GetStatus:
 		status, err := o.Status()
 		if err != nil {
 			return "", err
 		}
 
 		return status.printableStatus(), nil
-	}
-
-	switch command {
 	case Start:
 		err := launchctlutil.Start(o.config.GetLabel(), o.config.GetKind())
 		if err != nil {
@@ -80,6 +61,40 @@ func (o *darwinDaemon) ExecuteCommand(command Command) (string, error) {
 		isUnknown: true,
 		command:   command,
 	}
+}
+
+func (o *darwinDaemon) Status() (Status, error) {
+	details, err := launchctlutil.CurrentStatus(o.config.GetLabel())
+	if err != nil {
+		return "", err
+	}
+
+	switch details.Status {
+	case launchctlutil.NotInstalled:
+		return NotInstalled, nil
+	case launchctlutil.NotRunning:
+		return Stopped, nil
+	case launchctlutil.Running:
+		return Running, nil
+	}
+
+	return Unknown, nil
+}
+
+func (o *darwinDaemon) Install() error {
+	return fmt.Errorf("not implemented")
+}
+
+func (o *darwinDaemon) Uninstall() error {
+	return fmt.Errorf("not implemented")
+}
+
+func (o *darwinDaemon) Start() error {
+	return fmt.Errorf("not implemented")
+}
+
+func (o *darwinDaemon) Stop() error {
+	return fmt.Errorf("not implemented")
 }
 
 func (o *darwinDaemon) BlockAndRun(logic ApplicationLogic) error {

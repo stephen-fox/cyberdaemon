@@ -42,6 +42,10 @@ func (o Command) string() string {
 
 type Daemon interface {
 	Status() (Status, error)
+	Install() error
+	Uninstall() error
+	Start() error
+	Stop() error
 	ExecuteCommand(Command) (string, error)
 	BlockAndRun(ApplicationLogic) error
 }
