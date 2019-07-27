@@ -14,7 +14,7 @@ type darwinDaemon struct {
 	config launchctlutil.Configuration
 }
 
-func (o *darwinDaemon) ExecuteCommand(command Command) (string, error) {
+func (o *darwinDaemon) Execute(command Command) (string, error) {
 	switch command {
 	case GetStatus:
 		status, err := o.Status()

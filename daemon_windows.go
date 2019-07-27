@@ -17,7 +17,7 @@ type windowsDaemon struct {
 	config Config
 }
 
-func (o *windowsDaemon) ExecuteCommand(command Command) (string, error) {
+func (o *windowsDaemon) Execute(command Command) (string, error) {
 	switch command {
 	case GetStatus:
 		status, err := o.Status()

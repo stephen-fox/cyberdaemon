@@ -40,7 +40,7 @@ type Daemon interface {
 	Uninstall() error
 	Start() error
 	Stop() error
-	ExecuteCommand(Command) (string, error)
+	Execute(Command) (output string, err error)
 	BlockAndRun(ApplicationLogic) error
 }
 
