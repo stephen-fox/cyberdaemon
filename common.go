@@ -55,11 +55,11 @@ type Config struct {
 	Username    string
 }
 
-func CommandsString() string {
-	return "'" + strings.Join(Commands(), "', '") + "'"
+func SupportedCommandsString() string {
+	return fmt.Sprintf("'%s'", strings.Join(SupportedCommands(), "', '"))
 }
 
-func Commands() []string {
+func SupportedCommands() []string {
 	return []string{
 		GetStatus.string(),
 		Start.string(),

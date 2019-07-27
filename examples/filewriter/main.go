@@ -54,7 +54,7 @@ func main() {
 
 	defaultWorkDir = path.Join(defaultWorkDir, appName)
 
-	command := flag.String(daemonCommandArg, "", "The daemon command to execute")
+	command := flag.String(daemonCommandArg, "", "The daemon command to execute. This can be the following:\n" + cyberdaemon.SupportedCommandsString())
 	help := flag.Bool("h", false, "Displays this help page")
 
 	flag.Parse()
