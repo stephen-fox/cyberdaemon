@@ -162,7 +162,7 @@ func (o *windowsDaemon) Stop() error {
 	return nil
 }
 
-func (o *windowsDaemon) BlockAndRun(logic ApplicationLogic) error {
+func (o *windowsDaemon) RunUntilExit(logic ApplicationLogic) error {
 	isInteractive, err := svc.IsAnInteractiveSession()
 	if err != nil {
 		return err

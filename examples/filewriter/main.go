@@ -101,7 +101,7 @@ func main() {
 	//  and the Windows service trying to access the same file.
 	log.SetOutput(io.MultiWriter(logFile, os.Stderr))
 
-	err = daemon.BlockAndRun(&logic{
+	err = daemon.RunUntilExit(&logic{
 		dir:  defaultWorkDir,
 		stop: make(chan chan struct{}),
 	})

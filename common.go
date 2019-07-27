@@ -42,7 +42,7 @@ type Daemon interface {
 	Start() error
 	Stop() error
 	Execute(Command) (output string, err error)
-	BlockAndRun(ApplicationLogic) error
+	RunUntilExit(ApplicationLogic) error
 }
 
 type ApplicationLogic interface {

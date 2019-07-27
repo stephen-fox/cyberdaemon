@@ -57,7 +57,7 @@ func (o *darwinDaemon) Stop() error {
 	return launchctlutil.Stop(o.config.GetLabel(), o.config.GetKind())
 }
 
-func (o *darwinDaemon) BlockAndRun(logic ApplicationLogic) error {
+func (o *darwinDaemon) RunUntilExit(logic ApplicationLogic) error {
 	c := make(chan os.Signal)
 
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
