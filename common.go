@@ -68,7 +68,3 @@ func Commands() []string {
 		Uninstall.string(),
 	}
 }
-
-func executedCommandMessage(command Command) string {
-	return "Executed '" + command.string() + "' daemon control command"
-}
