@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/stephen-fox/launchctlutil"
@@ -102,6 +103,13 @@ func NewDaemon(config Config) (Daemon, error) {
 	exePath, err := os.Executable()
 	if err != nil {
 		return nil, err
+	}
+
+	switch strings.Count(config.Name, ".") {
+	case 1:
+		config.Name = fmt.Sprintf("com.%s", config.Name)
+	case 0:
+		config.Name = fmt.Sprintf("com.notspecified.%s", config.Name)
 	}
 
 	// TODO: Make macOS options customizable.
