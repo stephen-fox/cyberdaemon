@@ -23,12 +23,15 @@ const (
 	Uninstall Command = "uninstall"
 )
 
+// Status represents the status of a daemon.
 type Status string
 
 func (o Status) String() string {
 	return string(o)
 }
 
+// Command represents a command that can be issued to a daemon, or that can
+// control a daemon.
 type Command string
 
 func (o Command) string() string {
@@ -55,10 +58,13 @@ type Config struct {
 	Username    string
 }
 
+// SupportedCommandsString returns a printable string that represents a list of
+// supported daemon control commands.
 func SupportedCommandsString() string {
 	return fmt.Sprintf("'%s'", strings.Join(SupportedCommands(), "', '"))
 }
 
+// SupportedCommands returns a slice of supported daemon control commands.
 func SupportedCommands() []string {
 	return []string{
 		GetStatus.string(),
@@ -69,6 +75,7 @@ func SupportedCommands() []string {
 	}
 }
 
+// Execute executes a daemon control command for the provided daemon.
 func Execute(command Command, daemon Daemon) (output string, err error) {
 	switch command {
 	case GetStatus:
