@@ -27,10 +27,10 @@ const (
 type Status string
 
 func (o Status) printableStatus() string {
-	return daemonStatusPrefix + string(o)
+	return daemonStatusPrefix + o.String()
 }
 
-func (o Status) string() string {
+func (o Status) String() string {
 	return string(o)
 }
 
