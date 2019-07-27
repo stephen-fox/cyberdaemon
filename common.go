@@ -5,8 +5,6 @@ import (
 )
 
 const (
-	daemonStatusPrefix = "daemon status - "
-
 	Unknown      Status = "unknown"
 	Running      Status = "running"
 	Stopped      Status = "stopped"
@@ -25,10 +23,6 @@ const (
 )
 
 type Status string
-
-func (o Status) printableStatus() string {
-	return daemonStatusPrefix + o.String()
-}
 
 func (o Status) String() string {
 	return string(o)

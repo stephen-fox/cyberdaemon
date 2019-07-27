@@ -25,7 +25,7 @@ func (o *windowsDaemon) ExecuteCommand(command Command) (string, error) {
 			return "", err
 		}
 
-		return status.printableStatus(), nil
+		return status.String(), nil
 	case Install:
 		return "", o.Install()
 	case Uninstall:

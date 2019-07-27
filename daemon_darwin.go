@@ -22,7 +22,7 @@ func (o *darwinDaemon) ExecuteCommand(command Command) (string, error) {
 			return "", err
 		}
 
-		return status.printableStatus(), nil
+		return status.String(), nil
 	case Start:
 		return "", o.Start()
 	case Stop:
