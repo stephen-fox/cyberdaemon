@@ -15,28 +15,7 @@ type darwinDaemon struct {
 }
 
 func (o *darwinDaemon) Execute(command Command) (string, error) {
-	switch command {
-	case GetStatus:
-		status, err := o.Status()
-		if err != nil {
-			return "", err
-		}
-
-		return status.String(), nil
-	case Start:
-		return "", o.Start()
-	case Stop:
-		return "", o.Stop()
-	case Install:
-		return "", o.Install()
-	case Uninstall:
-		return "", o.Uninstall()
-	}
-
-	return "", &CommandError{
-		isUnknown: true,
-		command:   command,
-	}
+	return execute(command, o)
 }
 
 func (o *darwinDaemon) Status() (Status, error) {

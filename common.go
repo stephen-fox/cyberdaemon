@@ -1,6 +1,7 @@
 package cyberdaemon
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -67,4 +68,46 @@ func Commands() []string {
 		Install.string(),
 		Uninstall.string(),
 	}
+}
+
+func execute(command Command, daemon Daemon) (string, error) {
+	switch command {
+	case GetStatus:
+		status, err := daemon.Status()
+		if err != nil {
+			return "", fmt.Errorf("failed to get daemon status - %s", err.Error())
+		}
+
+		return status.String(), nil
+	case Start:
+		err := daemon.Start()
+		if err != nil {
+			return "", fmt.Errorf("failed to start daemon - %s", err.Error())
+		}
+
+		return "", nil
+	case Stop:
+		err := daemon.Stop()
+		if err != nil {
+			return "", fmt.Errorf("failed to stop daemon - %s", err.Error())
+		}
+
+		return "", nil
+	case Install:
+		err := daemon.Install()
+		if err != nil {
+			return "", fmt.Errorf("failed to install daemon - %s", err.Error())
+		}
+
+		return "", nil
+	case Uninstall:
+		err := daemon.Uninstall()
+		if err != nil {
+			return "", fmt.Errorf("failed to uninstall daemon - %s", err.Error())
+		}
+
+		return "", nil
+	}
+
+	return "", fmt.Errorf("unknown daemon command '%s'", command.string())
 }

@@ -18,28 +18,7 @@ type windowsDaemon struct {
 }
 
 func (o *windowsDaemon) Execute(command Command) (string, error) {
-	switch command {
-	case GetStatus:
-		status, err := o.Status()
-		if err != nil {
-			return "", err
-		}
-
-		return status.String(), nil
-	case Install:
-		return "", o.Install()
-	case Uninstall:
-		return "", o.Uninstall()
-	case Start:
-		return "", o.Start()
-	case Stop:
-		return "", o.Stop()
-	}
-
-	return "", &CommandError{
-		isUnknown: true,
-		command:   command,
-	}
+	return execute(command, o)
 }
 
 func (o *windowsDaemon) Status() (Status, error) {
