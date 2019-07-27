@@ -23,38 +23,13 @@ func (o *darwinDaemon) ExecuteCommand(command Command) (string, error) {
 
 		return status.printableStatus(), nil
 	case Start:
-		err := launchctlutil.Start(o.config.GetLabel(), o.config.GetKind())
-		if err != nil {
-			return "", err
-		}
-
-		return "", nil
+		return "", o.Start()
 	case Stop:
-		err := launchctlutil.Stop(o.config.GetLabel(), o.config.GetKind())
-		if err != nil {
-			return "", err
-		}
-
-		return "", nil
+		return "", o.Stop()
 	case Install:
-		err := launchctlutil.Install(o.config)
-		if err != nil {
-			return "", err
-		}
-
-		return "", nil
+		return "", o.Install()
 	case Uninstall:
-		filePath, err := o.config.GetFilePath()
-		if err != nil {
-			return "", err
-		}
-
-		err = launchctlutil.Remove(filePath, o.config.GetKind())
-		if err != nil {
-			return "", err
-		}
-
-		return "", nil
+		return "", o.Uninstall()
 	}
 
 	return "", &CommandError{
@@ -82,19 +57,24 @@ func (o *darwinDaemon) Status() (Status, error) {
 }
 
 func (o *darwinDaemon) Install() error {
-	return fmt.Errorf("not implemented")
+	return launchctlutil.Install(o.config)
 }
 
 func (o *darwinDaemon) Uninstall() error {
-	return fmt.Errorf("not implemented")
+	configFilePath, err := o.config.GetFilePath()
+	if err != nil {
+		return err
+	}
+
+	return launchctlutil.Remove(configFilePath, o.config.GetKind())
 }
 
 func (o *darwinDaemon) Start() error {
-	return fmt.Errorf("not implemented")
+	return launchctlutil.Start(o.config.GetLabel(), o.config.GetKind())
 }
 
 func (o *darwinDaemon) Stop() error {
-	return fmt.Errorf("not implemented")
+	return launchctlutil.Stop(o.config.GetLabel(), o.config.GetKind())
 }
 
 func (o *darwinDaemon) BlockAndRun(logic ApplicationLogic) error {
