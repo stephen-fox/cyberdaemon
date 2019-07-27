@@ -14,10 +14,6 @@ type darwinDaemon struct {
 	config launchctlutil.Configuration
 }
 
-func (o *darwinDaemon) Execute(command Command) (string, error) {
-	return execute(command, o)
-}
-
 func (o *darwinDaemon) Status() (Status, error) {
 	details, err := launchctlutil.CurrentStatus(o.config.GetLabel())
 	if err != nil {

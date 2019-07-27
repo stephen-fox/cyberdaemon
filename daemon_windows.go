@@ -17,10 +17,6 @@ type windowsDaemon struct {
 	config Config
 }
 
-func (o *windowsDaemon) Execute(command Command) (string, error) {
-	return execute(command, o)
-}
-
 func (o *windowsDaemon) Status() (Status, error) {
 	m, err := mgr.Connect()
 	if err != nil {

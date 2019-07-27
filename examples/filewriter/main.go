@@ -85,7 +85,7 @@ func main() {
 	}
 
 	if len(*command) > 0 {
-		output, err := daemon.Execute(cyberdaemon.Command(*command))
+		output, err := cyberdaemon.Execute(cyberdaemon.Command(*command), daemon)
 		if err != nil {
 			log.Fatalln(err.Error())
 		}

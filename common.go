@@ -41,7 +41,6 @@ type Daemon interface {
 	Uninstall() error
 	Start() error
 	Stop() error
-	Execute(Command) (output string, err error)
 	RunUntilExit(ApplicationLogic) error
 }
 
@@ -70,7 +69,7 @@ func Commands() []string {
 	}
 }
 
-func execute(command Command, daemon Daemon) (string, error) {
+func Execute(command Command, daemon Daemon) (output string, err error) {
 	switch command {
 	case GetStatus:
 		status, err := daemon.Status()
