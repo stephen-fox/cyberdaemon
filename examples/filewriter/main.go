@@ -12,7 +12,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/stephen-sfox/cyberdaemon"
+	"github.com/stephen-fox/cyberdaemon"
 )
 
 const (

@@ -1,4 +1,4 @@
-module github.com/stephen-sfox/cyberdaemon
+module github.com/stephen-fox/cyberdaemon
 
 go 1.12
 
