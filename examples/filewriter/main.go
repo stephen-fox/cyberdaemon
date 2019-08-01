@@ -57,8 +57,12 @@ func main() {
 		os.Exit(0)
 	}
 
+	daemonId := appName
+	if runtime.GOOS == "darwin" {
+		daemonId = fmt.Sprintf("com.github.stephen-fox.%s", appName)
+	}
 	daemon, err := cyberdaemon.NewDaemon(cyberdaemon.Config{
-		DaemonId:    appName,
+		DaemonId:    daemonId,
 		Description: description,
 		LogConfig:   cyberdaemon.LogConfig{
 			OutputToNativeLog: true,
