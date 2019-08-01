@@ -61,7 +61,7 @@ func (o *darwinDaemon) RunUntilExit(logic ApplicationLogic) error {
 	// The 'PS1' environment variable will be empty / not set when
 	// this is run non-interactively. Only do native log things
 	// when running non-interactively.
-	if len(os.Getenv("PS1")) == 0 && o.logConfig.OutputToNativeLog {
+	if len(os.Getenv("PS1")) == 0 && o.logConfig.UseNativeLogger {
 		err := os.MkdirAll(path.Dir(o.stderrLogFilePath), 0700)
 		if err != nil {
 			return err
@@ -108,7 +108,7 @@ func NewDaemon(config Config) (Daemon, error) {
 
 	var logFilePath string
 
-	if config.LogConfig.OutputToNativeLog {
+	if config.LogConfig.UseNativeLogger {
 		// TODO: Support user, or system logs.
 		// TODO: Use a friendly name for the log directory
 		//  and file name.

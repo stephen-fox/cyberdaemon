@@ -182,7 +182,7 @@ func (o *windowsDaemon) RunUntilExit(logic ApplicationLogic) error {
 		return logic.Stop()
 	}
 
-	if o.config.LogConfig.OutputToNativeLog {
+	if o.config.LogConfig.UseNativeLogger {
 		events, err := eventlog.Open(o.config.DaemonId)
 		if err != nil {
 			return err

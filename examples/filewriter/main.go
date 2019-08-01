@@ -65,7 +65,7 @@ func main() {
 		DaemonId:    daemonId,
 		Description: description,
 		LogConfig:   cyberdaemon.LogConfig{
-			OutputToNativeLog: true,
+			UseNativeLogger: true,
 		},
 	})
 	if err != nil {
