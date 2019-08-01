@@ -47,12 +47,12 @@ The daemon can be uninstalled by running:
 )
 
 func main() {
-	defaultWorkDir := "/tmp"
+	workDirPath := "/tmp"
 	if runtime.GOOS == "windows" {
-		defaultWorkDir = os.Getenv("TEMP")
+		workDirPath = os.Getenv("TEMP")
 	}
 
-	defaultWorkDir = path.Join(defaultWorkDir, appName)
+	workDirPath = path.Join(workDirPath, appName)
 
 	command := flag.String(daemonCommandArg, "", "The daemon command to execute. This can be the following:\n" + cyberdaemon.SupportedCommandsString())
 	help := flag.Bool("h", false, "Displays this help page")
@@ -65,12 +65,12 @@ func main() {
 		os.Exit(0)
 	}
 
-	err := os.MkdirAll(defaultWorkDir, 0755)
+	err := os.MkdirAll(workDirPath, 0755)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
 
-	logFile, err := os.OpenFile(path.Join(defaultWorkDir, "filewriter.log"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	logFile, err := os.OpenFile(path.Join(workDirPath, "filewriter.log"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
@@ -105,7 +105,7 @@ func main() {
 	log.SetOutput(io.MultiWriter(logFile, os.Stderr))
 
 	err = daemon.RunUntilExit(&logic{
-		dir:  defaultWorkDir,
+		dir:  workDirPath,
 		stop: make(chan chan struct{}),
 	})
 	if err != nil {
