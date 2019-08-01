@@ -80,17 +80,17 @@ func NewDaemon(config Config) (Daemon, error) {
 		return nil, err
 	}
 
-	switch strings.Count(config.Name, ".") {
+	switch strings.Count(config.DaemonId, ".") {
 	case 1:
-		config.Name = fmt.Sprintf("com.%s", config.Name)
+		config.DaemonId = fmt.Sprintf("com.%s", config.DaemonId)
 	case 0:
-		config.Name = fmt.Sprintf("com.notspecified.%s", config.Name)
+		config.DaemonId = fmt.Sprintf("com.notspecified.%s", config.DaemonId)
 	}
 
 	// TODO: Make macOS options customizable.
 	lconfig, err := launchctlutil.NewConfigurationBuilder().
 		SetKind(launchctlutil.UserAgent).
-		SetLabel(config.Name).
+		SetLabel(config.DaemonId).
 		SetRunAtLoad(true).
 		SetCommand(exePath).
 		Build()

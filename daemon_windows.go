@@ -26,7 +26,7 @@ func (o *windowsDaemon) Status() (Status, error) {
 	}
 	defer m.Disconnect()
 
-	s, err := m.OpenService(o.config.Name)
+	s, err := m.OpenService(o.config.DaemonId)
 	if err != nil {
 		return "", err
 	}
@@ -65,7 +65,7 @@ func (o *windowsDaemon) Install() error {
 	defer m.Disconnect()
 
 	c := mgr.Config{
-		DisplayName: o.config.Name,
+		DisplayName: o.config.DaemonId,
 		Description: o.config.Description,
 		// TODO: Make service start type customizable.
 		StartType:   mgr.StartAutomatic,
@@ -77,13 +77,13 @@ func (o *windowsDaemon) Install() error {
 	}
 
 	// TODO: Support custom arguments.
-	s, err := m.CreateService(o.config.Name, exePath, c)
+	s, err := m.CreateService(o.config.DaemonId, exePath, c)
 	if err != nil {
 		return err
 	}
 	defer s.Close()
 
-	err = eventlog.InstallAsEventCreate(o.config.Name, eventlog.Error|eventlog.Warning|eventlog.Info)
+	err = eventlog.InstallAsEventCreate(o.config.DaemonId, eventlog.Error|eventlog.Warning|eventlog.Info)
 	if err != nil {
 		s.Delete()
 		return err
@@ -99,7 +99,7 @@ func (o *windowsDaemon) Uninstall() error {
 	}
 	defer m.Disconnect()
 
-	s, err := m.OpenService(o.config.Name)
+	s, err := m.OpenService(o.config.DaemonId)
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func (o *windowsDaemon) Uninstall() error {
 		return err
 	}
 
-	err = eventlog.Remove(o.config.Name)
+	err = eventlog.Remove(o.config.DaemonId)
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (o *windowsDaemon) Start() error {
 	}
 	defer m.Disconnect()
 
-	s, err := m.OpenService(o.config.Name)
+	s, err := m.OpenService(o.config.DaemonId)
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,7 @@ func (o *windowsDaemon) Stop() error {
 	}
 	defer m.Disconnect()
 
-	s, err := m.OpenService(o.config.Name)
+	s, err := m.OpenService(o.config.DaemonId)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func (o *windowsDaemon) RunUntilExit(logic ApplicationLogic) error {
 	}
 
 	if o.config.LogConfig.OutputToNativeLog {
-		events, err := eventlog.Open(o.config.Name)
+		events, err := eventlog.Open(o.config.DaemonId)
 		if err != nil {
 			return err
 		}
@@ -208,7 +208,7 @@ func (o *windowsDaemon) RunUntilExit(logic ApplicationLogic) error {
 	}
 
 	wrapper := serviceWrapper{
-		name:     o.config.Name,
+		name:     o.config.DaemonId,
 		appLogic: logic,
 		errMutex: &sync.Mutex{},
 	}

@@ -53,7 +53,7 @@ type ApplicationLogic interface {
 }
 
 type Config struct {
-	Name        string
+	DaemonId    string
 	Description string
 	Username    string
 	LogConfig   LogConfig

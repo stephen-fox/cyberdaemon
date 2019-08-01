@@ -77,7 +77,7 @@ func main() {
 	defer logFile.Close()
 
 	daemon, err := cyberdaemon.NewDaemon(cyberdaemon.Config{
-		Name:        appName,
+		DaemonId:    appName,
 		Description: description,
 		LogConfig:   cyberdaemon.LogConfig{
 			OutputToNativeLog: true,
