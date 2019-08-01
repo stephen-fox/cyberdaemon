@@ -56,6 +56,12 @@ type Config struct {
 	Name        string
 	Description string
 	Username    string
+	LogConfig   LogConfig
+}
+
+type LogConfig struct {
+	OutputToNativeLog bool
+	NativeLogFlags    int
 }
 
 // SupportedCommandsString returns a printable string that represents a list of
