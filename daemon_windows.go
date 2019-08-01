@@ -6,6 +6,8 @@ import (
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"
 	"golang.org/x/sys/windows/svc/mgr"
+	"io"
+	"log"
 	"os"
 	"os/signal"
 	"strconv"
@@ -164,6 +166,30 @@ func (o *windowsDaemon) RunUntilExit(logic ApplicationLogic) error {
 		return err
 	}
 
+	if o.config.LogConfig.OutputToNativeLog {
+		events, err := eventlog.Open(o.config.Name)
+		if err != nil {
+			return err
+		}
+		currentFlags := log.Flags()
+		if o.config.LogConfig.NativeLogFlags > 0 {
+			log.SetFlags(o.config.LogConfig.NativeLogFlags)
+		} else {
+			log.SetFlags(0)
+		}
+		logWriter := &eventLogWriter{
+			fn: events.Info,
+		}
+		if isInteractive {
+			log.SetOutput(io.MultiWriter(os.Stderr, logWriter))
+		} else {
+			log.SetOutput(logWriter)
+		}
+		defer log.SetFlags(currentFlags)
+		defer log.SetOutput(os.Stderr)
+		defer events.Close()
+	}
+
 	if isInteractive {
 		err = logic.Start()
 		if err != nil {
@@ -193,6 +219,19 @@ func (o *windowsDaemon) RunUntilExit(logic ApplicationLogic) error {
 	}
 
 	return nil
+}
+
+type eventLogWriter struct {
+	fn func(eventId uint32, message string) error
+}
+
+func (o eventLogWriter) Write(p []byte) (n int, err error) {
+	err = o.fn(0, string(p))
+	if err != nil {
+		return 0, err
+	}
+
+	return len(p), nil
 }
 
 type serviceWrapper struct {
