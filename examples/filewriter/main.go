@@ -5,7 +5,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path"
@@ -47,13 +46,6 @@ The daemon can be uninstalled by running:
 )
 
 func main() {
-	workDirPath := "/tmp"
-	if runtime.GOOS == "windows" {
-		workDirPath = os.Getenv("TEMP")
-	}
-
-	workDirPath = path.Join(workDirPath, appName)
-
 	command := flag.String(daemonCommandArg, "", "The daemon command to execute. This can be the following:\n" + cyberdaemon.SupportedCommandsString())
 	help := flag.Bool("h", false, "Displays this help page")
 
@@ -64,17 +56,6 @@ func main() {
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
-
-	err := os.MkdirAll(workDirPath, 0755)
-	if err != nil {
-		log.Fatalln(err.Error())
-	}
-
-	logFile, err := os.OpenFile(path.Join(workDirPath, "filewriter.log"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		log.Fatalln(err.Error())
-	}
-	defer logFile.Close()
 
 	daemon, err := cyberdaemon.NewDaemon(cyberdaemon.Config{
 		DaemonId:    appName,
@@ -100,12 +81,7 @@ func main() {
 		return
 	}
 
-	// TODO: Do this earlier in a way that does not conflict the app
-	//  and the Windows service trying to access the same file.
-	log.SetOutput(io.MultiWriter(logFile, os.Stderr))
-
 	err = daemon.RunUntilExit(&logic{
-		dir:  workDirPath,
 		stop: make(chan chan struct{}),
 	})
 	if err != nil {
@@ -114,12 +90,22 @@ func main() {
 }
 
 type logic struct {
-	dir  string
 	stop chan chan struct{}
 }
 
 func (o *logic) Start() error {
-	f, err := os.OpenFile(path.Join(o.dir, "filewriter-output.txt"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	workDirPath := "/tmp"
+	if runtime.GOOS == "windows" {
+		workDirPath = os.Getenv("TEMP")
+	}
+	workDirPath = path.Join(workDirPath, appName)
+
+	err := os.MkdirAll(workDirPath, 0755)
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
+
+	f, err := os.OpenFile(path.Join(workDirPath, "filewriter-output.txt"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return err
 	}
