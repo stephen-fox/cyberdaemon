@@ -120,7 +120,7 @@ func (o *logic) Stop() error {
 	onStopTimeout := time.NewTimer(stopTimeout)
 	rejoin := make(chan struct{})
 
-	log.Println("stopping")
+	log.Println("stopping...")
 
 	select {
 	case o.stop <- rejoin:
