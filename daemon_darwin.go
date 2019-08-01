@@ -76,23 +76,17 @@ func (o *darwinDaemon) RunUntilExit(logic ApplicationLogic) error {
 		}
 	}
 
-	interruptsAndTerms := make(chan os.Signal)
-	signal.Notify(interruptsAndTerms, os.Interrupt, syscall.SIGTERM)
-	defer signal.Stop(interruptsAndTerms)
-
 	err := logic.Start()
 	if err != nil {
 		return err
 	}
 
+	interruptsAndTerms := make(chan os.Signal)
+	signal.Notify(interruptsAndTerms, os.Interrupt, syscall.SIGTERM)
 	<-interruptsAndTerms
+	signal.Stop(interruptsAndTerms)
 
-	err = logic.Stop()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return logic.Stop()
 }
 
 func NewDaemon(config Config) (Daemon, error) {
