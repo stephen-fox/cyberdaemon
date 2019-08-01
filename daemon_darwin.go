@@ -80,11 +80,8 @@ func NewDaemon(config Config) (Daemon, error) {
 		return nil, err
 	}
 
-	switch strings.Count(config.DaemonId, ".") {
-	case 1:
-		config.DaemonId = fmt.Sprintf("com.%s", config.DaemonId)
-	case 0:
-		config.DaemonId = fmt.Sprintf("com.notspecified.%s", config.DaemonId)
+	if strings.Count(config.DaemonId, ".") < 2 {
+		return nil, fmt.Errorf("daemon ID must be in reverse DNS format on macOS")
 	}
 
 	// TODO: Make macOS options customizable.
