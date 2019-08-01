@@ -172,11 +172,8 @@ func (o *windowsDaemon) RunUntilExit(logic ApplicationLogic) error {
 		}
 
 		interrupts := make(chan os.Signal)
-
 		signal.Notify(interrupts, os.Interrupt)
-
 		<-interrupts
-
 		signal.Stop(interrupts)
 
 		return logic.Stop()
