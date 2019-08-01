@@ -46,7 +46,8 @@ The daemon can be uninstalled by running:
 )
 
 func main() {
-	command := flag.String(daemonCommandArg, "", "The daemon command to execute. This can be the following:\n" + cyberdaemon.SupportedCommandsString())
+	command := flag.String(daemonCommandArg, "", "The daemon command to execute. This can be the following:\n" +
+		cyberdaemon.SupportedCommandsString())
 	help := flag.Bool("h", false, "Displays this help page")
 
 	flag.Parse()
