@@ -80,6 +80,7 @@ func NewDaemon(config Config) (Daemon, error) {
 		return nil, err
 	}
 
+	// TODO: Allow user to provide reverse DNS prefix using OS option.
 	if strings.Count(config.DaemonId, ".") < 2 {
 		return nil, fmt.Errorf("daemon ID must be in reverse DNS format on macOS")
 	}
