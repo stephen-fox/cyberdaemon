@@ -79,6 +79,9 @@ func main() {
 	daemon, err := cyberdaemon.NewDaemon(cyberdaemon.Config{
 		Name:        appName,
 		Description: description,
+		LogConfig:   cyberdaemon.LogConfig{
+			OutputToNativeLog: true,
+		},
 	})
 	if err != nil {
 		log.Fatalln(err.Error())
