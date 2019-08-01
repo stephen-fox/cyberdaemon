@@ -2,8 +2,10 @@ package cyberdaemon
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
+	"path"
 	"strings"
 	"syscall"
 
@@ -11,7 +13,9 @@ import (
 )
 
 type darwinDaemon struct {
-	config launchctlutil.Configuration
+	config            launchctlutil.Configuration
+	stderrLogFilePath string
+	logConfig         LogConfig
 }
 
 func (o *darwinDaemon) Status() (Status, error) {
@@ -54,17 +58,34 @@ func (o *darwinDaemon) Stop() error {
 }
 
 func (o *darwinDaemon) RunUntilExit(logic ApplicationLogic) error {
-	c := make(chan os.Signal)
+	// The 'PS1' environment variable will be empty / not set when
+	// this is run non-interactively. Only do native log things
+	// when running non-interactively.
+	if len(os.Getenv("PS1")) == 0 && o.logConfig.OutputToNativeLog {
+		err := os.MkdirAll(path.Dir(o.stderrLogFilePath), 0700)
+		if err != nil {
+			return err
+		}
 
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	defer signal.Stop(c)
+		log.SetOutput(os.Stderr)
+
+		if o.logConfig.NativeLogFlags > 0 {
+			originalLogFlags := log.Flags()
+			log.SetFlags(o.logConfig.NativeLogFlags)
+			defer log.SetFlags(originalLogFlags)
+		}
+	}
+
+	interruptsAndTerms := make(chan os.Signal)
+	signal.Notify(interruptsAndTerms, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(interruptsAndTerms)
 
 	err := logic.Start()
 	if err != nil {
 		return err
 	}
 
-	<-c
+	<-interruptsAndTerms
 
 	err = logic.Stop()
 	if err != nil {
@@ -85,18 +106,30 @@ func NewDaemon(config Config) (Daemon, error) {
 		return nil, fmt.Errorf("daemon ID must be in reverse DNS format on macOS")
 	}
 
+	var logFilePath string
+
+	if config.LogConfig.OutputToNativeLog {
+		// TODO: Support user, or system logs.
+		// TODO: Use a friendly name for the log directory
+		//  and file name.
+		logFilePath = path.Join(os.Getenv("HOME"), "Library", "Logs", config.DaemonId, config.DaemonId + ".log")
+	}
+
 	// TODO: Make macOS options customizable.
 	lconfig, err := launchctlutil.NewConfigurationBuilder().
 		SetKind(launchctlutil.UserAgent).
 		SetLabel(config.DaemonId).
 		SetRunAtLoad(true).
 		SetCommand(exePath).
+		SetStandardErrorPath(logFilePath).
 		Build()
 	if err != nil {
 		return nil, err
 	}
 
 	return &darwinDaemon{
-		config: lconfig,
+		config:            lconfig,
+		stderrLogFilePath: logFilePath,
+		logConfig:         config.LogConfig,
 	}, nil
 }
