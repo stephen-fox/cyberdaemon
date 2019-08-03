@@ -149,7 +149,6 @@ exit $RETVAL`
 	shortDescriptionPlaceholder = placeholderDelim + "SHORT_DESCRIPTION" + placeholderDelim
 	descriptionPlaceholder      = placeholderDelim + "DESCRIPTION" + placeholderDelim
 	exePathPlaceholder          = placeholderDelim + "EXE_PATH" + placeholderDelim
-	workDirPathPlaceholder      = placeholderDelim + "WORKING_DIRECTORY" + placeholderDelim
 	logFilePathPlaceholder      = placeholderDelim + "LOG_FILE_PATH" + placeholderDelim
 	pidFilePathPlaceholder      = placeholderDelim + "PID_FILE_PATH" + placeholderDelim
 	placeholderDelim            = "^"
@@ -332,12 +331,10 @@ func NewDaemon(config Config) (Daemon, error) {
 
 	pidFilePath := fmt.Sprintf("/var/run/%s.pid", config.DaemonId)
 
-	// TODO: Make working directory customizable.
 	replacer := strings.NewReplacer(serviceNamePlaceholder, config.DaemonId,
 		shortDescriptionPlaceholder, fmt.Sprintf("%s daemon.", config.DaemonId),
 		descriptionPlaceholder, config.Description,
 		exePathPlaceholder, exePath,
-		workDirPathPlaceholder, "/tmp",
 		logFilePathPlaceholder, logFilePath,
 		pidFilePathPlaceholder, pidFilePath)
 
