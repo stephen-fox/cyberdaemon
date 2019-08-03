@@ -1,136 +1,167 @@
 package cyberdaemon
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path"
+	"strconv"
 	"strings"
 	"syscall"
 )
 
 const (
-	// systemvTemplate represents a template for a System V init script.
-	// This template is based on work by Felix H. "fhd" Dahlke et al.
-	//  from: https://github.com/fhd/init-script-template/blob/master/template
-	//  commit: 5bc40ef4814128f4358af09e2295004e8ef9b30d
-	systemvTemplate = `#!/bin/sh
+	// TODO: Support additional 'Required' and 'Should' statements,
+	//  such as '$network'.
+	// TODO: Support run level customization.
+	// systemvRedHatTemplate is a System V init.d script template
+	// that contains placeholders for customizable options. This
+	// template is based on '/etc/init.d/sshd' from CentOS 6.10.
+	// Credit to the OpenSSH team et al:
+	//  Taken from: https://github.com/openssh/openssh-portable/blob/master/contrib/redhat/sshd.init
+	//  Commit: 79226e5413c5b0fda3511351a8511ff457e306d8
+	systemvRedHatTemplate =`#!/bin/bash
+#
+# This file is based on '/etc/init.d/sshd' from the OpenSSH project.
+# See https://github.com/openssh/openssh-portable/blob/master/LICENCE
+# for details.
+
 ### BEGIN INIT INFO
-# Provides:          ` + serviceNamePlaceholder + `
-# Required-Start:    $remote_fs $syslog
-# Required-Stop:     $remote_fs $syslog
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
+# Provides: ` + serviceNamePlaceholder + `
+# Required-Start: $local_fs $syslog
+# Required-Stop: $local_fs $syslog
+# Should-Start: $syslog
+# Should-Stop: $syslog
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
 # Short-Description: ` + shortDescriptionPlaceholder + `
 # Description:       ` + descriptionPlaceholder + `
 ### END INIT INFO
 
-dir="` + workDirPathPlaceholder + `"
-cmd="` + commandPlaceholder + `"
-user=""
+# source function library
+. /etc/rc.d/init.d/functions
 
-name="$(basename $0)"
-pid_file="/var/run/$name.pid"
-log_file_path="` + logFilePathPlaceholder + `"
+RETVAL=0
+PROGRAM_NAME="` + serviceNamePlaceholder + `"
+PROGRAM_PATH="` + exePathPlaceholder + `"
+ARGUMENTS=""
+RUN_AS=""
+LOG_FILE_PATH="` + logFilePathPlaceholder + `"
+PID_FILE="` + pidFilePathPlaceholder + `"
 
-get_pid() {
-    cat "$pid_file"
+runlevel=$(set -- $(runlevel); eval "echo \$$#" )
+
+start()
+{
+	[ -x $PROGRAM_PATH ] || exit 5
+	echo -n $"Starting $PROGRAM_NAME: "
+	if [ -z "${RUN_AS}" ] || [ "${RUN_AS}" == "root" ]
+	then
+		$PROGRAM_PATH $ARGUMENTS && success || failure
+	else
+		su ${RUN_AS} -c "$PROGRAM_PATH $ARGUMENTS" && success || failure
+	fi
+	RETVAL=$?
+	echo
+	return $RETVAL
 }
 
-is_running() {
-    [ -f "$pid_file" ] && ps -p $(get_pid) > /dev/null 2>&1
+stop()
+{
+	echo -n $"Stopping $PROGRAM_NAME: "
+	killproc -p $PID_FILE $PROGRAM_PATH
+	RETVAL=$?
+	# if we are in halt or reboot runlevel kill all running sessions
+	# so the TCP connections are closed cleanly
+	if [ "x$runlevel" = x0 -o "x$runlevel" = x6 ] ; then
+	    trap '' TERM
+	    killall $PROGRAM_NAME 2>/dev/null
+	    trap TERM
+	fi
+	echo
+}
+
+reload()
+{
+	echo -n $"Reloading $PROGRAM_NAME: "
+	killproc -p $PID_FILE $PROGRAM_PATH -HUP
+	RETVAL=$?
+	echo
+}
+
+restart() {
+	stop
+	start
+}
+
+force_reload() {
+	restart
+}
+
+rh_status() {
+	status -p $PID_FILE $PROGRAM_NAME
+}
+
+rh_status_q() {
+	rh_status >/dev/null 2>&1
 }
 
 case "$1" in
-    start)
-    if is_running; then
-        echo "Already started"
-    else
-        echo "Starting $name"
-        cd "$dir"
-        if [ -z "$user" ]; then
-            sudo $cmd 2>> "$log_file_path" &
-        else
-            sudo -u "$user" $cmd 2>> "$log_file_path" &
-        fi
-        echo $! > "$pid_file"
-        if ! is_running; then
-            echo "Unable to start, see $log_file_path"
-            exit 1
-        fi
-    fi
-    ;;
-    stop)
-    if is_running; then
-        echo -n "Stopping $name..."
-        kill $(get_pid)
-        for i in 1 2 3 4 5 6 7 8 9 10
-        do
-            if ! is_running; then
-                break
-            fi
-
-            echo -n "."
-            sleep 1
-        done
-        echo
-
-        if is_running; then
-            echo "Not stopped; may still be shutting down or shutdown may have failed"
-            exit 1
-        else
-            echo "Stopped"
-            if [ -f "$pid_file" ]; then
-                rm "$pid_file"
-            fi
-        fi
-    else
-        echo "Not running"
-    fi
-    ;;
-    restart)
-    $0 stop
-    if is_running; then
-        echo "Unable to stop, will not attempt to start"
-        exit 1
-    fi
-    $0 start
-    ;;
-    status)
-    if is_running; then
-        echo "` + string(Running) + `"
-    else
-        echo "` + string(Stopped) + `"
-        exit 1
-    fi
-    ;;
-    *)
-    echo "Usage: $0 {start|stop|restart|status}"
-    exit 1
-    ;;
+	start)
+		rh_status_q && exit 0
+		start
+		;;
+	stop)
+		if ! rh_status_q; then
+			exit 0
+		fi
+		stop
+		;;
+	restart)
+		restart
+		;;
+	reload)
+		rh_status_q || exit 7
+		reload
+		;;
+	force-reload)
+		force_reload
+		;;
+	condrestart|try-restart)
+		rh_status_q || exit 0
+		;;
+	status)
+		rh_status
+		RETVAL=$?
+		;;
+	*)
+		echo $"Usage: $0 {start|stop|restart|reload|force-reload|condrestart|try-restart|status}"
+		RETVAL=2
 esac
+exit $RETVAL`
 
-exit 0
-`
 	serviceNamePlaceholder      = placeholderDelim + "NAME" + placeholderDelim
 	shortDescriptionPlaceholder = placeholderDelim + "SHORT_DESCRIPTION" + placeholderDelim
 	descriptionPlaceholder      = placeholderDelim + "DESCRIPTION" + placeholderDelim
-	commandPlaceholder          = placeholderDelim + "COMMAND" + placeholderDelim
+	exePathPlaceholder          = placeholderDelim + "EXE_PATH" + placeholderDelim
 	workDirPathPlaceholder      = placeholderDelim + "WORKING_DIRECTORY" + placeholderDelim
 	logFilePathPlaceholder      = placeholderDelim + "LOG_FILE_PATH" + placeholderDelim
+	pidFilePathPlaceholder      = placeholderDelim + "PID_FILE_PATH" + placeholderDelim
 	placeholderDelim            = "^"
 
-	notInstalledSuffix = ": unrecognized service"
+	pidFilePerm    = 0644
+	runAsDaemonEnv = "CYBERDAEMON_RESERVED_DAEMONIZE_R3OGMOJ405FMHT"
 )
 
 type systemvDaemon struct {
-	config       Config
 	initContents string
 	initFilePath string
-	logDirPath   string
+	pidFilePath  string
 }
 
 func (o *systemvDaemon) Status() (Status, error) {
@@ -143,6 +174,8 @@ func (o *systemvDaemon) Status() (Status, error) {
 	if err != nil {
 		if strings.HasSuffix(output, Stopped.String()) {
 			return Stopped, nil
+		} else if strings.HasSuffix(output, "dead but pid file exists") {
+			return StoppedDead, nil
 		}
 		return Unknown, err
 	}
@@ -188,20 +221,67 @@ func (o *systemvDaemon) Stop() error {
 
 func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 	// The 'PS1' environment variable will be empty / not set when
-	// this is run non-interactively. Only do native log things
-	// when running non-interactively.
-	if o.config.LogConfig.UseNativeLogger && len(os.Getenv("PS1")) == 0 {
-		err := os.MkdirAll(o.logDirPath, 0700)
-		if err != nil {
-			return err
+	// this is run non-interactively.
+	if len(os.Getenv("PS1")) == 0 {
+		// Only do native log things when running non-interactively.
+		if o.config.LogConfig.UseNativeLogger {
+			log.SetOutput(os.Stderr)
+
+			if o.config.LogConfig.NativeLogFlags > 0 {
+				originalLogFlags := log.Flags()
+				log.SetFlags(o.config.LogConfig.NativeLogFlags)
+				defer log.SetFlags(originalLogFlags)
+			}
 		}
 
-		log.SetOutput(os.Stderr)
+		if pidFile, openErr := os.Open(o.pidFilePath); openErr == nil {
+			raw, _ := ioutil.ReadAll(io.LimitReader(pidFile, 1000))
+			pidFile.Close()
+			if isAlreadyRunning, pid := isPidRunning(raw); isAlreadyRunning {
+				return fmt.Errorf("daemon is already running as PID %d", pid)
+			}
+		}
 
-		if o.config.LogConfig.NativeLogFlags > 0 {
-			originalLogFlags := log.Flags()
-			log.SetFlags(o.config.LogConfig.NativeLogFlags)
-			defer log.SetFlags(originalLogFlags)
+		// TODO: Super hack. We need to fork so we can do things like
+		//  check the PID file, check configuration, etc and then go to
+		//  the background. However, go cannot fork... Instead, we can
+		//  use exec to start a new process. The problem with that is
+		//  the new process needs to know when to do the exec.
+		//  Otherwise, it will just exec itself forever (in other
+		//  words, it needs to know when it is the exec'd process).
+		//  Using the PID file is not really an option without writing
+		//  something that is not a PID to the file. I do not want to
+		//  risk reinterpretation by ps, or another utility.
+		//  The next-least-hackiest solution is to pass en environment
+		//  variable. Using stdin is a possibility as well, but that
+		//  is more complicated and error prone (all while still being
+		//  a big 'ol hack). So, a reserved environment variable it is!
+		if _, hasEnv := os.LookupEnv(runAsDaemonEnv); !hasEnv {
+			exePath, err := os.Executable()
+			if err != nil {
+				return fmt.Errorf("failed to get executable path when restarting as daemon - %s", err.Error())
+			}
+
+			daemon := exec.Command(exePath, os.Args[1:]...)
+			daemon.Env = append(os.Environ(), fmt.Sprintf("%s=true", runAsDaemonEnv))
+
+			err = daemon.Start()
+			if err != nil {
+				return fmt.Errorf("failed to exec daemon binary when restarting as daemon - %s", err.Error())
+			}
+
+			// Exit.
+			// TODO: Should we just os.Exit() here? Can we trust
+			//  the implementer to properly structure their code?
+			return nil
+		}
+
+		os.Unsetenv(runAsDaemonEnv)
+
+		// Now we are running as a daemon.
+		err := ioutil.WriteFile(o.pidFilePath, []byte(fmt.Sprintf("%d\n", os.Getpid())), pidFilePerm)
+		if err != nil {
+			return fmt.Errorf("failed to write PID to PID file when daemonized - %s", err.Error())
 		}
 	}
 
@@ -218,6 +298,25 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 	return logic.Stop()
 }
 
+func isPidRunning(raw []byte) (bool, uint64) {
+	raw = bytes.TrimSpace(raw)
+	if len(raw) == 0 {
+		return false, 0
+	}
+
+	pid, err := strconv.ParseUint(string(raw), 10, 32)
+	if err != nil {
+		return false, 0
+	}
+
+	info, err := os.Stat(fmt.Sprintf("/proc/%d", pid))
+	if err != nil || !info.IsDir() {
+		return false, pid
+	}
+
+	return true, pid
+}
+
 func NewDaemon(config Config) (Daemon, error) {
 	exePath, err := os.Executable()
 	if err != nil {
@@ -232,30 +331,39 @@ func NewDaemon(config Config) (Daemon, error) {
 		logFilePath = path.Join("/var/log", config.DaemonId, config.DaemonId + ".log")
 	}
 
+	pidFilePath := fmt.Sprintf("/var/run/%s.pid", config.DaemonId)
+
 	// TODO: Make working directory customizable.
 	replacer := strings.NewReplacer(serviceNamePlaceholder, config.DaemonId,
 		shortDescriptionPlaceholder, fmt.Sprintf("%s daemon.", config.DaemonId),
 		descriptionPlaceholder, config.Description,
-		commandPlaceholder, exePath,
+		exePathPlaceholder, exePath,
 		workDirPathPlaceholder, "/tmp",
-		logFilePathPlaceholder, logFilePath)
+		logFilePathPlaceholder, logFilePath,
+		pidFilePathPlaceholder, pidFilePath)
 
-	script := replacer.Replace(systemvTemplate)
+	// TODO: Debian support.
+	script := replacer.Replace(systemvRedHatTemplate)
 	if strings.Contains(script, placeholderDelim) {
 		return nil, fmt.Errorf("failed to replace all placeholders in daemon init.d script")
 	}
 
 	return &systemvDaemon{
-		config:       config,
 		initContents: script,
-		initFilePath: path.Join("/etc/init.d", config.DaemonId),
-		logDirPath:   path.Dir(logFilePath),
+		initFilePath: fmt.Sprintf("/etc/init.d/%s", config.DaemonId),
+		pidFilePath:  pidFilePath,
 	}, nil
 }
 
 func runServiceCommand(args ...string) (string, error) {
 	servicePath := "service"
-	output, err := exec.Command(servicePath, args...).CombinedOutput()
+
+	s := exec.Command(servicePath, args...)
+	s.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
+
+	output, err := s.CombinedOutput()
 	trimmedOutput := strings.TrimSpace(string(output))
 	if err != nil {
 		return trimmedOutput, fmt.Errorf("failed to execute '%s %s' - %s - output: %s",
