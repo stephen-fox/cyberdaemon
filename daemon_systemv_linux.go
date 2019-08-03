@@ -170,21 +170,18 @@ func (o *systemvDaemon) Status() (Status, error) {
 		return NotInstalled, nil
 	}
 
-	output, err := runServiceCommand(o.config.DaemonId, "status")
-	if err != nil {
-		if strings.HasSuffix(output, Stopped.String()) {
+	_, exitCode, statusErr := runServiceCommand(o.config.DaemonId, "status")
+	if statusErr != nil {
+		switch exitCode {
+		case 3:
 			return Stopped, nil
-		} else if strings.HasSuffix(output, "dead but pid file exists") {
+		case 1:
 			return StoppedDead, nil
 		}
-		return Unknown, err
 	}
 
-	switch output {
-	case Running.String():
+	if exitCode == 0 {
 		return Running, nil
-	case Stopped.String():
-		return Stopped, nil
 	}
 
 	return Unknown, nil
@@ -202,7 +199,7 @@ func (o *systemvDaemon) Uninstall() error {
 }
 
 func (o *systemvDaemon) Start() error {
-	_, err := runServiceCommand(o.config.DaemonId, "start")
+	_, _, err := runServiceCommand(o.config.DaemonId, "start")
 	if err != nil {
 		return err
 	}
@@ -211,7 +208,7 @@ func (o *systemvDaemon) Start() error {
 }
 
 func (o *systemvDaemon) Stop() error {
-	_, err := runServiceCommand(o.config.DaemonId, "stop")
+	_, _, err := runServiceCommand(o.config.DaemonId, "stop")
 	if err != nil {
 		return err
 	}
@@ -355,20 +352,17 @@ func NewDaemon(config Config) (Daemon, error) {
 	}, nil
 }
 
-func runServiceCommand(args ...string) (string, error) {
+func runServiceCommand(args ...string) (string, int, error) {
 	servicePath := "service"
 
 	s := exec.Command(servicePath, args...)
-	s.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
-	}
-
 	output, err := s.CombinedOutput()
 	trimmedOutput := strings.TrimSpace(string(output))
 	if err != nil {
-		return trimmedOutput, fmt.Errorf("failed to execute '%s %s' - %s - output: %s",
-			servicePath, args, err.Error(), trimmedOutput)
+		return trimmedOutput, s.ProcessState.ExitCode(),
+			fmt.Errorf("failed to execute '%s %s' - %s - output: %s",
+				servicePath, args, err.Error(), trimmedOutput)
 	}
 
-	return trimmedOutput, nil
+	return trimmedOutput, s.ProcessState.ExitCode(), nil
 }
