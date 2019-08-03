@@ -159,6 +159,8 @@ exit $RETVAL`
 )
 
 type systemvDaemon struct {
+	daemonId     string
+	logConfig    LogConfig
 	initContents string
 	initFilePath string
 	pidFilePath  string
@@ -170,7 +172,7 @@ func (o *systemvDaemon) Status() (Status, error) {
 		return NotInstalled, nil
 	}
 
-	_, exitCode, statusErr := runServiceCommand(o.config.DaemonId, "status")
+	_, exitCode, statusErr := runServiceCommand(o.daemonId, "status")
 	if statusErr != nil {
 		switch exitCode {
 		case 3:
@@ -199,7 +201,7 @@ func (o *systemvDaemon) Uninstall() error {
 }
 
 func (o *systemvDaemon) Start() error {
-	_, _, err := runServiceCommand(o.config.DaemonId, "start")
+	_, _, err := runServiceCommand(o.daemonId, "start")
 	if err != nil {
 		return err
 	}
@@ -208,7 +210,7 @@ func (o *systemvDaemon) Start() error {
 }
 
 func (o *systemvDaemon) Stop() error {
-	_, _, err := runServiceCommand(o.config.DaemonId, "stop")
+	_, _, err := runServiceCommand(o.daemonId, "stop")
 	if err != nil {
 		return err
 	}
@@ -221,12 +223,12 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 	// this is run non-interactively.
 	if len(os.Getenv("PS1")) == 0 {
 		// Only do native log things when running non-interactively.
-		if o.config.LogConfig.UseNativeLogger {
+		if o.logConfig.UseNativeLogger {
 			log.SetOutput(os.Stderr)
 
-			if o.config.LogConfig.NativeLogFlags > 0 {
+			if o.logConfig.NativeLogFlags > 0 {
 				originalLogFlags := log.Flags()
-				log.SetFlags(o.config.LogConfig.NativeLogFlags)
+				log.SetFlags(o.logConfig.NativeLogFlags)
 				defer log.SetFlags(originalLogFlags)
 			}
 		}
@@ -346,6 +348,8 @@ func NewDaemon(config Config) (Daemon, error) {
 	}
 
 	return &systemvDaemon{
+		daemonId:     config.DaemonId,
+		logConfig:    config.LogConfig,
 		initContents: script,
 		initFilePath: fmt.Sprintf("/etc/init.d/%s", config.DaemonId),
 		pidFilePath:  pidFilePath,
