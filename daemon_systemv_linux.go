@@ -16,15 +16,15 @@ import (
 )
 
 const (
-	// TODO: Support additional 'Required' and 'Should' statements,
-	//  such as '$network'.
-	// TODO: Support run level customization.
 	// systemvRedHatTemplate is a System V init.d script template
 	// that contains placeholders for customizable options. This
 	// template is based on '/etc/init.d/sshd' from CentOS 6.10.
 	// Credit to the OpenSSH team et al:
-	//  Taken from: https://github.com/openssh/openssh-portable/blob/master/contrib/redhat/sshd.init
+	//  Taken from: https://github.com/openssh/openssh-portable/blob/79226e5413c5b0fda3511351a8511ff457e306d8/contrib/redhat/sshd.init
 	//  Commit: 79226e5413c5b0fda3511351a8511ff457e306d8
+	// TODO: Support additional 'Required' and 'Should' statements,
+	//  such as '$network'.
+	// TODO: Support run level customization.
 	systemvRedHatTemplate =`#!/bin/bash
 #
 # This file is based on '/etc/init.d/sshd' from the OpenSSH project.
@@ -62,9 +62,9 @@ start()
 	echo -n $"Starting $PROGRAM_NAME: "
 	if [ -z "${RUN_AS}" ] || [ "${RUN_AS}" == "root" ]
 	then
-		$PROGRAM_PATH $ARGUMENTS && success || failure
+		$PROGRAM_PATH $ARGUMENTS 2> "$LOG_FILE_PATH" && success || failure
 	else
-		su ${RUN_AS} -c "$PROGRAM_PATH $ARGUMENTS" && success || failure
+		su ${RUN_AS} -c "$PROGRAM_PATH $ARGUMENTS  2> '$LOG_FILE_PATH'" && success || failure
 	fi
 	RETVAL=$?
 	echo
@@ -262,6 +262,9 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 
 			daemon := exec.Command(exePath, os.Args[1:]...)
 			daemon.Env = append(os.Environ(), fmt.Sprintf("%s=true", runAsDaemonEnv))
+			if o.logConfig.UseNativeLogger {
+				daemon.Stderr = os.Stderr
+			}
 
 			err = daemon.Start()
 			if err != nil {
