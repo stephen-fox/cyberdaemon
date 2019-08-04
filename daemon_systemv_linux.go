@@ -51,8 +51,11 @@ PROGRAM_NAME="` + serviceNamePlaceholder + `"
 PROGRAM_PATH="` + exePathPlaceholder + `"
 ARGUMENTS=""
 RUN_AS=""
-LOG_FILE_PATH="` + logFilePathPlaceholder + `"
-PID_FILE="` + pidFilePathPlaceholder + `"
+if [ -z "${RUN_AS}" ]
+then
+	RUN_AS="root"
+fi
+PID_FILE_PATH="` + pidFilePathPlaceholder + `"
 
 runlevel=$(set -- $(runlevel); eval "echo \$$#" )
 
@@ -60,11 +63,22 @@ start()
 {
 	[ -x $PROGRAM_PATH ] || exit 5
 	echo -n $"Starting $PROGRAM_NAME: "
-	if [ -z "${RUN_AS}" ] || [ "${RUN_AS}" == "root" ]
+	mkdir -p "${PID_FILE_PATH%/*}"
+	chown -R "${RUN_AS}:${RUN_AS}" "${PID_FILE_PATH%/*}"
+	local logFilePath="` + logFilePathPlaceholder + `"
+	if [ -z "${logFilePath}" ]
 	then
-		$PROGRAM_PATH $ARGUMENTS 2> "$LOG_FILE_PATH" && success || failure
+		logFilePath=/dev/null
 	else
-		su ${RUN_AS} -c "$PROGRAM_PATH $ARGUMENTS  2> '$LOG_FILE_PATH'" && success || failure
+		mkdir -p -m 0700 "${logFilePath%/*}"
+		chown -R "${RUN_AS}:${RUN_AS}" "${logFilePath%/*}"
+		command="${command} 2> 'logFilePath'"
+	fi
+	if [ "${RUN_AS}" == "root" ]
+	then
+		$PROGRAM_PATH $ARGUMENTS 2> "$logFilePath" && success || failure
+	else
+		su $RUN_AS -c "$PROGRAM_PATH $ARGUMENTS  2> '$logFilePath'" && success || failure
 	fi
 	RETVAL=$?
 	echo
@@ -74,7 +88,7 @@ start()
 stop()
 {
 	echo -n $"Stopping $PROGRAM_NAME: "
-	killproc -p $PID_FILE $PROGRAM_PATH
+	killproc -p $PID_FILE_PATH $PROGRAM_PATH
 	RETVAL=$?
 	# if we are in halt or reboot runlevel kill all running sessions
 	# so the TCP connections are closed cleanly
@@ -89,7 +103,7 @@ stop()
 reload()
 {
 	echo -n $"Reloading $PROGRAM_NAME: "
-	killproc -p $PID_FILE $PROGRAM_PATH -HUP
+	killproc -p $PID_FILE_PATH $PROGRAM_PATH -HUP
 	RETVAL=$?
 	echo
 }
@@ -104,7 +118,7 @@ force_reload() {
 }
 
 rh_status() {
-	status -p $PID_FILE $PROGRAM_NAME
+	status -p $PID_FILE_PATH $PROGRAM_NAME
 }
 
 rh_status_q() {
@@ -232,6 +246,7 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 			}
 		}
 
+		// TODO: Is the PID file managed for us? Need to test.
 		if pidFile, openErr := os.Open(o.pidFilePath); openErr == nil {
 			raw, _ := ioutil.ReadAll(io.LimitReader(pidFile, 1000))
 			pidFile.Close()
@@ -332,7 +347,7 @@ func NewDaemon(config Config) (Daemon, error) {
 		logFilePath = path.Join("/var/log", config.DaemonId, config.DaemonId + ".log")
 	}
 
-	pidFilePath := fmt.Sprintf("/var/run/%s.pid", config.DaemonId)
+	pidFilePath := fmt.Sprintf("/var/run/%s/%s.pid", config.DaemonId, config.DaemonId)
 
 	replacer := strings.NewReplacer(serviceNamePlaceholder, config.DaemonId,
 		shortDescriptionPlaceholder, fmt.Sprintf("%s daemon.", config.DaemonId),
