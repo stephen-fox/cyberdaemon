@@ -3,7 +3,6 @@ package cyberdaemon
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -243,15 +242,6 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 				originalLogFlags := log.Flags()
 				log.SetFlags(o.logConfig.NativeLogFlags)
 				defer log.SetFlags(originalLogFlags)
-			}
-		}
-
-		// TODO: Is the PID file managed for us? Need to test.
-		if pidFile, openErr := os.Open(o.pidFilePath); openErr == nil {
-			raw, _ := ioutil.ReadAll(io.LimitReader(pidFile, 1000))
-			pidFile.Close()
-			if isAlreadyRunning, pid := isPidRunning(raw); isAlreadyRunning {
-				return fmt.Errorf("daemon is already running as PID %d", pid)
 			}
 		}
 
