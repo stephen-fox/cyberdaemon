@@ -449,6 +449,7 @@ func newSystemvDaemon(exePath string, config Config) (*systemvDaemon, error) {
 }
 
 func runServiceCommand(args ...string) (string, int, error) {
+	// TODO: Try to find 'service' in '/sbin/' or '/usr/sbin/'.
 	servicePath := "service"
 
 	s := exec.Command(servicePath, args...)
