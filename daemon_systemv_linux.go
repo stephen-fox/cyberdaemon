@@ -398,6 +398,7 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 		if err != nil {
 			return fmt.Errorf("failed to write PID to PID file when daemonized - %s", err.Error())
 		}
+		defer os.Remove(o.pidFilePath)
 	}
 
 	err := logic.Start()
