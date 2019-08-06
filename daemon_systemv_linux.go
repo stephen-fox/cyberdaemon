@@ -1,7 +1,6 @@
 package cyberdaemon
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -9,7 +8,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path"
-	"strconv"
 	"strings"
 	"syscall"
 )
@@ -413,25 +411,6 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 	signal.Stop(interruptsAndTerms)
 
 	return logic.Stop()
-}
-
-func isPidRunning(raw []byte) (bool, uint64) {
-	raw = bytes.TrimSpace(raw)
-	if len(raw) == 0 {
-		return false, 0
-	}
-
-	pid, err := strconv.ParseUint(string(raw), 10, 32)
-	if err != nil {
-		return false, 0
-	}
-
-	info, err := os.Stat(fmt.Sprintf("/proc/%d", pid))
-	if err != nil || !info.IsDir() {
-		return false, pid
-	}
-
-	return true, pid
 }
 
 func newSystemvDaemon(exePath string, config Config) (*systemvDaemon, error) {
