@@ -15,16 +15,18 @@ import (
 )
 
 const (
-	// systemvRedHatTemplate is a System V init.d script template
-	// that contains placeholders for customizable options. This
-	// template is based on '/etc/init.d/sshd' from CentOS 6.10.
+	// systemvTemplate is a System V init.d script template that
+	// contains placeholders for customizable options. This template
+	// is based on '/etc/init.d/sshd' from CentOS 6.10.
+	//
 	// Credit to the OpenSSH team et al:
 	//  Taken from: https://github.com/openssh/openssh-portable/blob/79226e5413c5b0fda3511351a8511ff457e306d8/contrib/redhat/sshd.init
 	//  Commit: 79226e5413c5b0fda3511351a8511ff457e306d8
+	//
 	// TODO: Support additional 'Required' and 'Should' statements,
 	//  such as '$network'.
 	// TODO: Support run level customization.
-	systemvRedHatTemplate =`#!/bin/bash
+	systemvTemplate = `#!/bin/bash
 #
 # This file is based on '/etc/init.d/sshd' from the OpenSSH project.
 # See https://github.com/openssh/openssh-portable/blob/master/LICENCE
@@ -42,10 +44,20 @@ const (
 # Description:       ` + descriptionPlaceholder + `
 ### END INIT INFO
 
-# source function library
-. /etc/rc.d/init.d/functions
+IS_REDHAT=""
+if [ -f "/etc/redhat-release" ]
+then
+    IS_REDHAT=true
+    . /etc/rc.d/init.d/functions
+else
+    . /lib/lsb/init-functions
+    export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
+    if init_is_upstart
+    then
+        exit 1
+    fi
+fi
 
-RETVAL=0
 PROGRAM_NAME="` + serviceNamePlaceholder + `"
 PROGRAM_PATH="` + exePathPlaceholder + `"
 ARGUMENTS=""
@@ -58,105 +70,204 @@ PID_FILE_PATH="` + pidFilePathPlaceholder + `"
 
 runlevel=$(set -- $(runlevel); eval "echo \$$#" )
 
-start()
-{
-	[ -x $PROGRAM_PATH ] || exit 5
-	echo -n $"Starting $PROGRAM_NAME: "
-	mkdir -p "${PID_FILE_PATH%/*}"
-	chown -R "${RUN_AS}:${RUN_AS}" "${PID_FILE_PATH%/*}"
+start() {
+    [ -x "${PROGRAM_PATH}" ] || exit 5
+    if [ -n "${IS_REDHAT}" ]
+    then
+        echo -n $"Starting $PROGRAM_NAME: "
+    else
+        check_dev_null
+        log_daemon_msg "Starting ${SHORT_DESCRIPTION}" "${PROGRAM_NAME}" || true
+    fi
+    mkdir -p "${PID_FILE_PATH%/*}"
+    chown -R "${RUN_AS}:${RUN_AS}" "${PID_FILE_PATH%/*}"
 	local logFilePath="` + logFilePathPlaceholder + `"
-	if [ -z "${logFilePath}" ]
-	then
-		logFilePath=/dev/null
-	else
-		mkdir -p -m 0700 "${logFilePath%/*}"
-		chown -R "${RUN_AS}:${RUN_AS}" "${logFilePath%/*}"
-		command="${command} 2> 'logFilePath'"
-	fi
-	if [ "${RUN_AS}" == "root" ]
-	then
-		$PROGRAM_PATH $ARGUMENTS 2> "$logFilePath" && success || failure
-	else
-		su $RUN_AS -c "$PROGRAM_PATH $ARGUMENTS  2> '$logFilePath'" && success || failure
-	fi
-	RETVAL=$?
-	echo
-	return $RETVAL
+    if [ -z "${logFilePath}" ]
+    then
+        logFilePath=/dev/null
+    else
+        mkdir -p -m 0700 "${logFilePath%/*}"
+        chown -R "${RUN_AS}:${RUN_AS}" "${logFilePath%/*}"
+    fi
+    local r=0
+    if [ "${RUN_AS}" == "root" ]
+    then
+        $PROGRAM_PATH $ARGUMENTS 2> "$logFilePath"
+    else
+        su $RUN_AS -c "$PROGRAM_PATH $ARGUMENTS  2> '$logFilePath'"
+    fi
+    r=$?
+    if [ -n "${IS_REDHAT}" ]
+    then
+        if [ $r -eq 0 ]
+        then
+            success
+        else
+            failure
+        fi
+        echo
+    else
+        if [ $r -eq 0 ]
+        then
+            log_end_msg 0 || true
+        else
+            log_end_msg 1 || true
+        fi
+    fi
+    return $r
 }
 
-stop()
-{
-	echo -n $"Stopping $PROGRAM_NAME: "
-	killproc -p $PID_FILE_PATH $PROGRAM_PATH
-	RETVAL=$?
-	# if we are in halt or reboot runlevel kill all running sessions
-	# so the TCP connections are closed cleanly
-	if [ "x$runlevel" = x0 -o "x$runlevel" = x6 ] ; then
-	    trap '' TERM
-	    killall $PROGRAM_NAME 2>/dev/null
-	    trap TERM
-	fi
-	echo
-}
-
-reload()
-{
-	echo -n $"Reloading $PROGRAM_NAME: "
-	killproc -p $PID_FILE_PATH $PROGRAM_PATH -HUP
-	RETVAL=$?
-	echo
-}
-
-restart() {
-	stop
-	start
-}
-
-force_reload() {
-	restart
+stop() {
+    if [ -n "${IS_REDHAT}" ]
+    then
+        echo -n $"Stopping $PROGRAM_NAME: "
+        killproc -p $PID_FILE_PATH $PROGRAM_PATH
+        echo
+    else
+        log_daemon_msg "Stopping ${SHORT_DESCRIPTION}" "${PROGRAM_NAME}" || true
+        if start-stop-daemon --stop --pidfile ${PID_FILE_PATH}
+        then
+            log_end_msg 0 || true
+        else
+            log_end_msg 1 || true
+        fi
+    fi
+    # if we are in halt or reboot runlevel kill all running sessions
+    # so the TCP connections are closed cleanly
+    if [ "x$runlevel" = x0 -o "x$runlevel" = x6 ]; then
+        trap '' TERM
+        pkill $PROGRAM_NAME 2>/dev/null
+        trap TERM
+    fi
+    return $?
 }
 
 rh_status() {
-	status -p $PID_FILE_PATH $PROGRAM_NAME
+    status -p $PID_FILE_PATH $PROGRAM_NAME
 }
 
 rh_status_q() {
-	rh_status >/dev/null 2>&1
+    rh_status >/dev/null 2>&1
+}
+
+run_by_init() {
+    ([ "$previous" ] && [ "$runlevel" ]) || [ "$runlevel" = S ]
+}
+
+check_dev_null() {
+    if [ ! -c /dev/null ]
+    then
+        if [ "$1" = log_end_msg ]
+        then
+            log_end_msg 1 || true
+        fi
+        if ! run_by_init
+        then
+            log_action_msg "/dev/null is not a character device!" || true
+        fi
+        exit 1
+    fi
 }
 
 case "$1" in
-	start)
-		rh_status_q && exit 0
-		start
-		;;
-	stop)
-		if ! rh_status_q; then
-			exit 0
-		fi
-		stop
-		;;
-	restart)
-		restart
-		;;
-	reload)
-		rh_status_q || exit 7
-		reload
-		;;
-	force-reload)
-		force_reload
-		;;
-	condrestart|try-restart)
-		rh_status_q || exit 0
-		;;
-	status)
-		rh_status
-		RETVAL=$?
-		;;
-	*)
-		echo $"Usage: $0 {start|stop|restart|reload|force-reload|condrestart|try-restart|status}"
-		RETVAL=2
+    start)
+        if [ -n "${IS_REDHAT}" ]
+        then
+            rh_status_q && exit 0
+        else
+            start-stop-daemon --status --pidfile ${PID_FILE_PATH} && exit 0
+        fi
+        start
+        ;;
+    stop)
+        if [ -n "${IS_REDHAT}" ]
+        then
+            if ! rh_status_q; then
+                exit 0
+            fi
+        else
+            start-stop-daemon --status --pidfile ${PID_FILE_PATH} || exit 0
+        fi
+        stop
+        ;;
+    restart)
+        stop
+        start
+        exit $?
+        ;;
+    reload|force-reload)
+        if [ -n "${IS_REDHAT}" ]
+        then
+            echo -n $"Reloading $PROGRAM_NAME: "
+            killproc -p $PID_FILE_PATH $PROGRAM_PATH -HUP
+            r=$?
+            echo
+            exit $r
+        else
+            log_daemon_msg "Reloading ${SHORT_DESCRIPTION}" "${PROGRAM_NAME}" || true
+            if start-stop-daemon --signal HUP --pidfile ${PID_FILE_PATH} --stop; then
+                log_end_msg 0 || true
+            else
+                log_end_msg 1 || true
+            fi
+        fi
+        ;;
+    condrestart|try-restart)
+        if [ -n "${IS_REDHAT}" ]
+        then
+            rh_status_q || exit 0
+            stop
+            start
+            exit $?
+        else
+            start-stop-daemon --status --pidfile ${PID_FILE_PATH} && exit 0
+            log_daemon_msg "Restarting ${SHORT_DESCRIPTION}" "${PROGRAM_NAME}" || true
+            r=0
+            start-stop-daemon --stop --quiet --retry 30 --pidfile ${PID_FILE_PATH} || r="$?"
+            case $r in
+                0)
+                # old daemon stopped
+                check_dev_null log_end_msg
+                if start
+                then
+                    log_end_msg 0 || true
+                else
+                    log_end_msg 1 || true
+                fi
+                ;;
+                1)
+                # daemon not running
+                log_progress_msg "(not running)" || true
+                log_end_msg 0 || true
+                ;;
+                *)
+                # failed to stop
+                log_progress_msg "(failed to stop)" || true
+                log_end_msg 1 || true
+                ;;
+            esac
+        fi
+        ;;
+    status)
+        if [ -n "${IS_REDHAT}" ]
+        then
+            rh_status
+            exit $?
+        else
+            status_of_proc -p ${PID_FILE_PATH} "${PROGRAM_PATH}" "${PROGRAM_NAME}" && exit 0 || exit $?
+        fi
+        ;;
+    *)
+        if [ -n "${IS_REDHAT}" ]
+        then
+            echo $"Usage: $0 {start|stop|restart|reload|force-reload|condrestart|try-restart|status}"
+        else
+            log_action_msg "Usage: $0 {start|stop|reload|force-reload|restart|try-restart|status}"
+        fi
+        exit 2
 esac
-exit $RETVAL`
+exit $?
+`
 
 	serviceNamePlaceholder      = placeholderDelim + "NAME" + placeholderDelim
 	shortDescriptionPlaceholder = placeholderDelim + "SHORT_DESCRIPTION" + placeholderDelim
@@ -323,20 +434,17 @@ func isPidRunning(raw []byte) (bool, uint64) {
 	return true, pid
 }
 
-func NewDaemon(config Config) (Daemon, error) {
-	exePath, err := os.Executable()
-	if err != nil {
-		return nil, err
-	}
-
+func newSystemvDaemon(exePath string, config Config) (*systemvDaemon, error) {
 	var logFilePath string
 
 	if config.LogConfig.UseNativeLogger {
+		// Log file path example: '/var/log/mydaemon/mydaemon.log'.
 		// TODO: Use a friendly name for the log directory
 		//  and file name.
 		logFilePath = path.Join("/var/log", config.DaemonId, config.DaemonId + ".log")
 	}
 
+	// PID file path example: '/var/run/mydaemon/mydaemon.pid'.
 	pidFilePath := fmt.Sprintf("/var/run/%s/%s.pid", config.DaemonId, config.DaemonId)
 
 	replacer := strings.NewReplacer(serviceNamePlaceholder, config.DaemonId,
@@ -346,8 +454,7 @@ func NewDaemon(config Config) (Daemon, error) {
 		logFilePathPlaceholder, logFilePath,
 		pidFilePathPlaceholder, pidFilePath)
 
-	// TODO: Debian support.
-	script := replacer.Replace(systemvRedHatTemplate)
+	script := replacer.Replace(systemvTemplate)
 	if strings.Contains(script, placeholderDelim) {
 		return nil, fmt.Errorf("failed to replace all placeholders in daemon init.d script")
 	}
