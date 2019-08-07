@@ -385,7 +385,7 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 		if isDaemon, _, _ := isRunningAsDaemon(); !isDaemon {
 			exePath, err := os.Executable()
 			if err != nil {
-				return fmt.Errorf("failed to get executable path when restarting as daemon - %s", err.Error())
+				return fmt.Errorf("failed to get executable path when exec'ing daemon - %s", err.Error())
 			}
 
 			daemon := exec.Command(exePath, os.Args[1:]...)
@@ -395,7 +395,7 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 
 			pipe, err := daemon.StdinPipe()
 			if err != nil {
-				return fmt.Errorf("failed to open pipe to daemon process - %s", err.Error())
+				return fmt.Errorf("failed to open pipe to daemon process's stdin - %s", err.Error())
 			}
 
 			writeErr := make(chan error)
@@ -403,7 +403,7 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 				_, err = writer.Write([]byte(runAsDaemonMagic + "\n"))
 				writer.Close()
 				if err != nil {
-					errs <- fmt.Errorf("failed to write daemon run command to daemon process's stdin - %s", err.Error())
+					errs <- err
 				} else {
 					errs <- nil
 				}
@@ -411,12 +411,12 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 
 			err = daemon.Start()
 			if err != nil {
-				return fmt.Errorf("failed to exec daemon binary when restarting as daemon - %s", err.Error())
+				return fmt.Errorf("failed to exec daemon process - %s", err.Error())
 			}
 
 			err = <-writeErr
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to write daemon run command to daemon process's stdin - %s", err.Error())
 			}
 
 			// Exit.
