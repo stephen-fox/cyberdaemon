@@ -1,7 +1,9 @@
 package cyberdaemon
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -10,6 +12,7 @@ import (
 	"path"
 	"strings"
 	"syscall"
+	"time"
 )
 
 const (
@@ -275,8 +278,8 @@ exit $?
 	pidFilePathPlaceholder      = placeholderDelim + "PID_FILE_PATH" + placeholderDelim
 	placeholderDelim            = "^"
 
-	pidFilePerm    = 0644
-	runAsDaemonEnv = "CYBERDAEMON_RESERVED_DAEMONIZE_R3OGMOJ405FMHT"
+	pidFilePerm      = 0644
+	runAsDaemonMagic = "CYBERDAEMON_RESERVED_DAEMONIZE_R3OGMOJ405FMHT"
 )
 
 type systemvDaemon struct {
@@ -354,35 +357,66 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 			}
 		}
 
-		// TODO: Super hack. We need to fork so we can do things like
-		//  check the PID file, check configuration, etc and then go to
-		//  the background. However, go cannot fork... Instead, we can
-		//  use exec to start a new process. The problem with that is
-		//  the new process needs to know when to do the exec.
-		//  Otherwise, it will just exec itself forever (in other
-		//  words, it needs to know when it is the exec'd process).
-		//  Using the PID file is not really an option without writing
-		//  something that is not a PID to the file. I do not want to
-		//  risk reinterpretation by ps, or another utility.
-		//  The next-least-hackiest solution is to pass en environment
-		//  variable. Using stdin is a possibility as well, but that
-		//  is more complicated and error prone (all while still being
-		//  a big 'ol hack). So, a reserved environment variable it is!
-		if _, hasEnv := os.LookupEnv(runAsDaemonEnv); !hasEnv {
+		// TODO: Super hack. We need to fork so we can do things
+		//  like check the PID file, check configuration, etc. and
+		//  then go to the background. However, go cannot fork...
+		//  Instead, we can use exec to start a new process.
+		//  The problem with that is the code needs a way to
+		//  determine if it should start a new process, or continue
+		//  running as-is.
+		//  Without "some state", the code will just exec itself
+		//  forever (in other words, it needs to know when it is
+		//  the exec'd process).
+		//  Using the PID file is not really an option without
+		//  writing something that is not a PID to the file.
+		//  I do not want to risk reinterpretation by ps, or
+		//  another utility.
+		//  The remaining solutions are:
+		//   - set a reserved env. variable on the new process
+		//   - pass a reserved value to the new process via stdin
+		//   - determine parent process / group?
+		//  Originally, I felt that using an environment variable
+		//  was the least complicated and most minimal hack. After
+		//  further consideration, I feel that using stdin is
+		//  cleaner, and has the least probability of being
+		//  exploited. It is slower, and more brittle, but reading
+		//  a known / reserved environment variable seems more
+		//  easily exploitable to me.
+		if isDaemon, _, _ := isRunningAsDaemon(); !isDaemon {
 			exePath, err := os.Executable()
 			if err != nil {
 				return fmt.Errorf("failed to get executable path when restarting as daemon - %s", err.Error())
 			}
 
 			daemon := exec.Command(exePath, os.Args[1:]...)
-			daemon.Env = append(os.Environ(), fmt.Sprintf("%s=true", runAsDaemonEnv))
 			if o.logConfig.UseNativeLogger {
 				daemon.Stderr = os.Stderr
 			}
 
+			pipe, err := daemon.StdinPipe()
+			if err != nil {
+				return fmt.Errorf("failed to open pipe to daemon process - %s", err.Error())
+			}
+
+			writeErr := make(chan error)
+			go func(errs chan error, writer io.WriteCloser) {
+				_, err = writer.Write([]byte(runAsDaemonMagic + "\n"))
+				writer.Close()
+				if err != nil {
+					errs <- fmt.Errorf("failed to write daemon run command to daemon process's stdin - %s", err.Error())
+				} else {
+					errs <- nil
+				}
+			}(writeErr, pipe)
+
 			err = daemon.Start()
 			if err != nil {
 				return fmt.Errorf("failed to exec daemon binary when restarting as daemon - %s", err.Error())
+			}
+
+			err = <-writeErr
+			if err != nil {
+				return err
 			}
 
 			// Exit.
@@ -390,8 +424,6 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 			//  the implementer to properly structure their code?
 			return nil
 		}
-
-		os.Unsetenv(runAsDaemonEnv)
 
 		// Now we are running as a daemon.
 		err := ioutil.WriteFile(o.pidFilePath, []byte(fmt.Sprintf("%d\n", os.Getpid())), pidFilePerm)
@@ -412,6 +444,39 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 	signal.Stop(interruptsAndTerms)
 
 	return logic.Stop()
+}
+
+func isRunningAsDaemon() (bool, time.Duration, error) {
+	start := time.Now()
+
+	type r struct {
+		isDaemon bool
+		err      error
+	}
+
+	results := make(chan r, 1)
+	go func(results chan r) {
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			results <- r{
+				isDaemon: scanner.Text() == runAsDaemonMagic,
+			}
+			return
+		}
+
+		results <- r{
+			err: scanner.Err(),
+		}
+	}(results)
+
+	timeout := time.NewTimer(50 * time.Millisecond)
+	select {
+	case <-timeout.C:
+		return false, time.Since(start), nil
+	case res := <-results:
+		timeout.Stop()
+		return res.isDaemon, time.Since(start), res.err
+	}
 }
 
 func newSystemvDaemon(exePath string, config Config) (*systemvDaemon, error) {
