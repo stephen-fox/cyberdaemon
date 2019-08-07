@@ -282,7 +282,15 @@ exit $?
 	runAsDaemonMagic = "CYBERDAEMON_RESERVED_DAEMONIZE_R3OGMOJ405FMHT"
 )
 
+var (
+	serviceExePaths = []string{
+		"/sbin/service",
+		"/usr/sbin/service",
+	}
+)
+
 type systemvDaemon struct {
+	servicePath  string
 	daemonId     string
 	logConfig    LogConfig
 	initContents string
@@ -296,7 +304,7 @@ func (o *systemvDaemon) Status() (Status, error) {
 		return NotInstalled, nil
 	}
 
-	_, exitCode, statusErr := runServiceCommand(o.daemonId, "status")
+	_, exitCode, statusErr := runServiceCommand(o.servicePath, o.daemonId, "status")
 	if statusErr != nil {
 		switch exitCode {
 		case 3:
@@ -325,7 +333,7 @@ func (o *systemvDaemon) Uninstall() error {
 }
 
 func (o *systemvDaemon) Start() error {
-	_, _, err := runServiceCommand(o.daemonId, "start")
+	_, _, err := runServiceCommand(o.servicePath, o.daemonId, "start")
 	if err != nil {
 		return err
 	}
@@ -334,7 +342,7 @@ func (o *systemvDaemon) Start() error {
 }
 
 func (o *systemvDaemon) Stop() error {
-	_, _, err := runServiceCommand(o.daemonId, "stop")
+	_, _, err := runServiceCommand(o.servicePath, o.daemonId, "stop")
 	if err != nil {
 		return err
 	}
@@ -479,7 +487,7 @@ func isRunningAsDaemon() (bool, time.Duration, error) {
 	}
 }
 
-func newSystemvDaemon(exePath string, config Config) (*systemvDaemon, error) {
+func newSystemvDaemon(exePath string, config Config, serviceExePath string) (*systemvDaemon, error) {
 	var logFilePath string
 
 	if config.LogConfig.UseNativeLogger {
@@ -505,6 +513,7 @@ func newSystemvDaemon(exePath string, config Config) (*systemvDaemon, error) {
 	}
 
 	return &systemvDaemon{
+		servicePath:  serviceExePath,
 		daemonId:     config.DaemonId,
 		logConfig:    config.LogConfig,
 		initContents: script,
@@ -513,17 +522,25 @@ func newSystemvDaemon(exePath string, config Config) (*systemvDaemon, error) {
 	}, nil
 }
 
-func runServiceCommand(args ...string) (string, int, error) {
-	// TODO: Try to find 'service' in '/sbin/' or '/usr/sbin/'.
-	servicePath := "service"
+func serviceExePath() (string, error) {
+	for i := range serviceExePaths {
+		info, err := os.Stat(serviceExePaths[i])
+		if err == nil && !info.IsDir() {
+			return serviceExePaths[i], nil
+		}
+	}
 
-	s := exec.Command(servicePath, args...)
+	return "", fmt.Errorf("failed to locate 'service' binary at the following paths: %v", serviceExePaths)
+}
+
+func runServiceCommand(exePath string, args ...string) (string, int, error) {
+	s := exec.Command(exePath, args...)
 	output, err := s.CombinedOutput()
 	trimmedOutput := strings.TrimSpace(string(output))
 	if err != nil {
 		return trimmedOutput, s.ProcessState.ExitCode(),
 			fmt.Errorf("failed to execute '%s %s' - %s - output: %s",
-				servicePath, args, err.Error(), trimmedOutput)
+				exePath, args, err.Error(), trimmedOutput)
 	}
 
 	return trimmedOutput, s.ProcessState.ExitCode(), nil

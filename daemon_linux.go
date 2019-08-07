@@ -15,11 +15,19 @@ func NewDaemon(config Config) (Daemon, error) {
 
 	if isSystemd() {
 		return nil, fmt.Errorf("systemd is currently unsupported")
-	} else if isSystemv() {
-		return newSystemvDaemon(exePath, config)
 	}
 
-	return nil, fmt.Errorf("systemd and system v were not found - no supported daemon types available")
+	servicePath, err := serviceExePath()
+	if err != nil {
+		return nil, err
+	}
+
+	output, _, _ := runServiceCommand(servicePath)
+	if strings.HasPrefix(output, "Usage: service <") {
+		return newSystemvDaemon(exePath, config, servicePath)
+	}
+
+	return nil, fmt.Errorf("failed to determine linux daemon type after checking for systemd and system v")
 }
 
 func isSystemd() bool {
@@ -29,13 +37,4 @@ func isSystemd() bool {
 	}
 
 	return true
-}
-
-func isSystemv() bool {
-	output, _, _ := runServiceCommand()
-	if strings.HasPrefix(output, "Usage: service <") {
-		return true
-	}
-
-	return false
 }
