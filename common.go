@@ -9,6 +9,7 @@ const (
 	Unknown      Status = "unknown"
 	Running      Status = "running"
 	Stopped      Status = "stopped"
+	StoppedDead  Status = "stopped_dead"
 	Starting     Status = "starting"
 	Stopping     Status = "stopping"
 	Resuming     Status = "resuming"
