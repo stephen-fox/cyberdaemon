@@ -21,6 +21,7 @@ freely, subject to the following restrictions:
    distribution.
 
 # github.com/openssh/openssh-portable
+```
 This file is part of the OpenSSH software.
 
 The licences which components of this software fall under are as
@@ -340,6 +341,7 @@ OpenSSH contains no GPL code.
 
 ------
 $OpenBSD: LICENCE,v 1.20 2017/04/30 23:26:16 djm Exp $
+```
 
 # github.com/stephen-fox/launchctlutil
 MIT License
