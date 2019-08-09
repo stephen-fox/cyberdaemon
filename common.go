@@ -53,6 +53,13 @@ type ApplicationLogic interface {
 	Stop() error
 }
 
+// TODO: Additional daemon configuration:
+//  - Manually setting daemon executable file path
+//  - Enabling the daemon when it is installed, or started
+//    (e.g., 'systemctl enable <whatever>', or Windows service's
+//    autostart feature)
+//  - Rename 'Username' field to 'RunAs'
+//  - Support OS specific options
 type Config struct {
 	DaemonId    string
 	Description string
