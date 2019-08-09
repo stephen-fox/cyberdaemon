@@ -397,6 +397,7 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 				return fmt.Errorf("failed to get executable path when exec'ing daemon - %s", err.Error())
 			}
 
+			// TODO: Just use 'os.Args[0]' as the path?
 			daemon := exec.Command(exePath, os.Args[1:]...)
 			if o.logConfig.UseNativeLogger {
 				daemon.Stderr = os.Stderr
