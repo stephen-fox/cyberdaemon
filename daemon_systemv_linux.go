@@ -289,6 +289,7 @@ var (
 	}
 )
 
+// TODO: Support chkconfig on / off?
 type systemvDaemon struct {
 	servicePath  string
 	daemonId     string
