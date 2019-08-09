@@ -14,7 +14,7 @@ func NewDaemon(config Config) (Daemon, error) {
 	}
 
 	if isSystemd() {
-		return nil, fmt.Errorf("systemd is currently unsupported")
+		return newSystemdDaemon(exePath, config, "/bin/systemctl")
 	}
 
 	servicePath, err := serviceExePath()
