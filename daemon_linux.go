@@ -22,7 +22,7 @@ func NewDaemon(config Config) (Daemon, error) {
 		return nil, err
 	}
 
-	output, _, _ := runServiceCommand(servicePath)
+	output, _, _ := runDaemonCli(servicePath)
 	if strings.HasPrefix(output, "Usage: service <") {
 		return newSystemvDaemon(exePath, config, servicePath)
 	}
@@ -37,4 +37,17 @@ func isSystemd() bool {
 	}
 
 	return true
+}
+
+func runDaemonCli(exePath string, args ...string) (string, int, error) {
+	s := exec.Command(exePath, args...)
+	output, err := s.CombinedOutput()
+	trimmedOutput := strings.TrimSpace(string(output))
+	if err != nil {
+		return trimmedOutput, s.ProcessState.ExitCode(),
+			fmt.Errorf("failed to execute '%s %s' - %s - output: %s",
+				exePath, args, err.Error(), trimmedOutput)
+	}
+
+	return trimmedOutput, s.ProcessState.ExitCode(), nil
 }

@@ -305,7 +305,7 @@ func (o *systemvDaemon) Status() (Status, error) {
 		return NotInstalled, nil
 	}
 
-	_, exitCode, statusErr := runServiceCommand(o.servicePath, o.daemonId, "status")
+	_, exitCode, statusErr := runDaemonCli(o.servicePath, o.daemonId, "status")
 	if statusErr != nil {
 		switch exitCode {
 		case 3:
@@ -334,7 +334,7 @@ func (o *systemvDaemon) Uninstall() error {
 }
 
 func (o *systemvDaemon) Start() error {
-	_, _, err := runServiceCommand(o.servicePath, o.daemonId, "start")
+	_, _, err := runDaemonCli(o.servicePath, o.daemonId, "start")
 	if err != nil {
 		return err
 	}
@@ -343,7 +343,7 @@ func (o *systemvDaemon) Start() error {
 }
 
 func (o *systemvDaemon) Stop() error {
-	_, _, err := runServiceCommand(o.servicePath, o.daemonId, "stop")
+	_, _, err := runDaemonCli(o.servicePath, o.daemonId, "stop")
 	if err != nil {
 		return err
 	}
@@ -529,17 +529,4 @@ func serviceExePath() (string, error) {
 	}
 
 	return "", fmt.Errorf("failed to locate 'service' binary at the following paths: %v", serviceExePaths)
-}
-
-func runServiceCommand(exePath string, args ...string) (string, int, error) {
-	s := exec.Command(exePath, args...)
-	output, err := s.CombinedOutput()
-	trimmedOutput := strings.TrimSpace(string(output))
-	if err != nil {
-		return trimmedOutput, s.ProcessState.ExitCode(),
-			fmt.Errorf("failed to execute '%s %s' - %s - output: %s",
-				exePath, args, err.Error(), trimmedOutput)
-	}
-
-	return trimmedOutput, s.ProcessState.ExitCode(), nil
 }
