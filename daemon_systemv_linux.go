@@ -410,13 +410,9 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 
 			writeErr := make(chan error)
 			go func(errs chan error, writer io.WriteCloser) {
-				_, err = writer.Write([]byte(runAsDaemonMagic + "\n"))
+				_, err := writer.Write([]byte(runAsDaemonMagic + "\n"))
 				writer.Close()
-				if err != nil {
-					errs <- err
-				} else {
-					errs <- nil
-				}
+				errs <- err
 			}(writeErr, pipe)
 
 			err = daemon.Start()
