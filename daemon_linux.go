@@ -7,14 +7,16 @@ import (
 	"strings"
 )
 
+// TODO: Provide a means to override the daemon CLI executable path. Also,
+//  search some common directories for the executable after trying defaults.
 func NewDaemon(config Config) (Daemon, error) {
 	exePath, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
 
-	if isSystemd() {
-		return newSystemdDaemon(exePath, config, "/bin/systemctl")
+	if _, systemctlExitCode, _ := runDaemonCli(defaultSystemdExePath); systemctlExitCode == 0 {
+		return newSystemdDaemon(exePath, config, defaultSystemdExePath)
 	}
 
 	servicePath, err := serviceExePath()
@@ -28,15 +30,6 @@ func NewDaemon(config Config) (Daemon, error) {
 	}
 
 	return nil, fmt.Errorf("failed to determine linux daemon type after checking for systemd and system v")
-}
-
-func isSystemd() bool {
-	_, err := exec.Command("/bin/systemctl").CombinedOutput()
-	if err != nil {
-		return false
-	}
-
-	return true
 }
 
 func runDaemonCli(exePath string, args ...string) (string, int, error) {

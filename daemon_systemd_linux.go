@@ -11,6 +11,10 @@ import (
 	"github.com/coreos/go-systemd/unit"
 )
 
+const (
+	defaultSystemdExePath = "/bin/systemctl"
+)
+
 // TODO: Support systemctl enable / disable.
 type systemdDaemon struct {
 	systemctlPath string
