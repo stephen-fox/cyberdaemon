@@ -132,11 +132,6 @@ func newSystemdDaemon(exePath string, config Config, systemctlPath string) (*sys
 			Name:    "WantedBy",
 			Value:   "multi-user.target",
 		},
-		{
-			Section: "Install",
-			Name:    "Alias",
-			Value:   "sshd.service",
-		},
 	}
 
 	unitContents, err := ioutil.ReadAll(unit.Serialize(unitOptions))
