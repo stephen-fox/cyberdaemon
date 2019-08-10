@@ -352,6 +352,18 @@ func (o *systemvDaemon) Install() error {
 			return err
 		}
 	case ManualStart:
+		// By default, Linux sets system v services to auto start after
+		// installation completes. We need to tell the OS to disable
+		// auto start when the user requests that the daemon
+		// only start manually.
+		if o.isRedHat {
+			_, _, err = runDaemonCli(o.chkconfig, o.daemonId, "off",)
+		} else {
+			_, _, err = runDaemonCli(o.updatercd, o.daemonId, "disable",)
+		}
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
