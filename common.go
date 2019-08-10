@@ -27,11 +27,13 @@ const (
 	// after its installation completes..
 	ManualStart StartType = "manual"
 
-	// StartOnLoad means that the daemon will start when it is loaded
-	// by the operating system. The daemon will not start after the
-	// installation completes (with the exception of macOS, which is
-	// explained below). This behavior varies from one operating system
-	// to another.
+	// StartOnLoad means that the daemon will not start after its
+	// installation completes (with the exception of macOS). It will,
+	// however, start each subsequent time the operating system loads
+	// the daemon. Each operating system "loads" the daemon at slightly
+	// different points depending on who owns the daemon (i.e., the
+	// system itself, or a normal user). This is explained in further
+	// detail below.
 	//
 	// On macOS, this means the daemon will start when either the system
 	// boots (a system daemon), or when a user logs in (a user agent).
@@ -41,13 +43,13 @@ const (
 	// On Linux - the answer is a bit more complicated. On System V
 	// (init.d), the daemon will start when the operating system boots.
 	// This will happen regardless of the daemon being run by root,
-	// or by a normal user. On systemd machines, the daemon will start
-	// when the operating system boots. However, a user-owned daemon
-	// will only start when that user logs in.
+	// or by a normal user. On systemd machines, a system-owned daemon
+	// will start when the operating system boots. However, a user-owned
+	// daemon will only start when that user logs in.
 	//
 	// On Windows, the daemon will start when the operating system
 	// boots. If the daemon is configured to run as a normal user,
-	// it will start when the user logs in.
+	// it will only start when the user logs in.
 	StartOnLoad StartType = "start_on_load"
 
 	// StartImmediately means that the daemon will start immediately
