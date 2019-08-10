@@ -57,9 +57,12 @@ func (o *windowsDaemon) Status() (Status, error) {
 }
 
 func (o *windowsDaemon) Install() error {
-	startType := mgr.StartManual
-	if o.config.StartType == StartOnLoad {
-		startType = mgr.StartAutomatic
+	var winStartType uint32
+	switch o.config.StartType {
+	case StartImmediately, StartOnLoad:
+		winStartType = mgr.StartAutomatic
+	default:
+		winStartType = mgr.StartManual
 	}
 
 	m, err := mgr.Connect()
@@ -71,7 +74,7 @@ func (o *windowsDaemon) Install() error {
 	c := mgr.Config{
 		DisplayName: o.config.DaemonId,
 		Description: o.config.Description,
-		StartType:   startType,
+		StartType:   winStartType,
 	}
 
 	exePath, err := os.Executable()
