@@ -57,6 +57,11 @@ func (o *windowsDaemon) Status() (Status, error) {
 }
 
 func (o *windowsDaemon) Install() error {
+	startType := mgr.StartManual
+	if o.config.StartType == StartOnLoad {
+		startType = mgr.StartAutomatic
+	}
+
 	m, err := mgr.Connect()
 	if err != nil {
 		return err
@@ -66,8 +71,7 @@ func (o *windowsDaemon) Install() error {
 	c := mgr.Config{
 		DisplayName: o.config.DaemonId,
 		Description: o.config.Description,
-		// TODO: Make service start type customizable.
-		StartType:   mgr.StartAutomatic,
+		StartType:   startType,
 	}
 
 	exePath, err := os.Executable()
@@ -81,6 +85,14 @@ func (o *windowsDaemon) Install() error {
 		return err
 	}
 	defer s.Close()
+
+	if o.config.StartType == StartImmediately {
+		err := s.Start()
+		if err != nil {
+			s.Delete()
+			return err
+		}
+	}
 
 	err = eventlog.InstallAsEventCreate(o.config.DaemonId, eventlog.Error|eventlog.Warning|eventlog.Info)
 	if err != nil {
