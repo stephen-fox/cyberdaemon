@@ -24,8 +24,9 @@ const (
 	Uninstall Command = "uninstall"
 
 	// StartImmediately means that the daemon will start immediately
-	// after it is installed, and will be subsequently started when the
-	// operating system loads the daemon.
+	// after it is installed, and will be started whenever the
+	// operating system loads the daemon (i.e., the behavior of the
+	// 'StartOnLoad' option).
 	//
 	// See StartOnLoad for a detailed explanation of this behavior.
 	StartImmediately StartType = "start_immediately"
