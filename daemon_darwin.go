@@ -37,6 +37,13 @@ func (o *darwinDaemon) Status() (Status, error) {
 }
 
 func (o *darwinDaemon) Install() error {
+	if o.logConfig.UseNativeLogger {
+		err := os.MkdirAll(path.Dir(o.stderrLogFilePath), 0700)
+		if err != nil {
+			return err
+		}
+	}
+
 	return launchctlutil.Install(o.config)
 }
 
@@ -63,11 +70,6 @@ func (o *darwinDaemon) RunUntilExit(logic ApplicationLogic) error {
 	// this is run non-interactively. Only do native log things
 	// when running non-interactively.
 	if o.logConfig.UseNativeLogger && len(os.Getenv("PS1")) == 0 {
-		err := os.MkdirAll(path.Dir(o.stderrLogFilePath), 0700)
-		if err != nil {
-			return err
-		}
-
 		log.SetOutput(os.Stderr)
 
 		if o.logConfig.NativeLogFlags > 0 {
