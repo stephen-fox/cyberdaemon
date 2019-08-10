@@ -99,6 +99,7 @@ func (o *systemdDaemon) RunUntilExit(logic ApplicationLogic) error {
 		// Only do native log things when running non-interactively.
 		if o.logConfig.UseNativeLogger {
 			log.SetOutput(os.Stderr)
+			log.SetFlags(0)
 
 			if o.logConfig.NativeLogFlags > 0 {
 				originalLogFlags := log.Flags()
