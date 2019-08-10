@@ -24,7 +24,8 @@ const (
 	Uninstall Command = "uninstall"
 
 	// ManualStart means that the daemon must be started manually
-	// after its installation completes..
+	// after its installation completes. In addition, the operating
+	// system will not start the daemon when it loads it.
 	ManualStart StartType = "manual"
 
 	// StartOnLoad means that the daemon will not start after its
