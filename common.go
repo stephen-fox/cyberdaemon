@@ -98,6 +98,7 @@ type ApplicationLogic interface {
 // TODO: Additional daemon configuration:
 //  - Manually setting daemon executable file path
 //  - Support OS specific options
+//  - Optionally remove configuration file if install fails
 type Config struct {
 	DaemonId    string
 	Description string
