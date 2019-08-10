@@ -48,19 +48,32 @@ func (o *systemdDaemon) Status() (Status, error) {
 }
 
 func (o *systemdDaemon) Install() error {
-	return ioutil.WriteFile(o.unitFilePath, o.unitContents, 0644)
+	err := ioutil.WriteFile(o.unitFilePath, o.unitContents, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write systemd unit file - %s", err.Error())
+	}
+
+	_, _, err = runDaemonCli(o.systemctlPath, "enable", o.daemonId)
+	if err != nil {
+		return err
+	}
+
+	// TODO: If user specifies to start after installing.
+	err = o.Start()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (o *systemdDaemon) Uninstall() error {
 	// TODO: Should we do this before uninstalling other daemons?
 	o.Stop()
 
-	// TODO: systemctl remove or whatever.
-
 	return os.Remove(o.unitFilePath)
 }
 
-// TODO: systemctl enable thing?
 func (o *systemdDaemon) Start() error {
 	_, _, err := runDaemonCli(o.systemctlPath, "start", o.daemonId)
 	if err != nil {
@@ -70,7 +83,6 @@ func (o *systemdDaemon) Start() error {
 	return nil
 }
 
-// TODO: systemctl disable thing?
 func (o *systemdDaemon) Stop() error {
 	_, _, err := runDaemonCli(o.systemctlPath, "stop", o.daemonId)
 	if err != nil {
