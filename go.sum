@@ -6,4 +6,5 @@ github.com/stephen-fox/launchctlutil v1.2.0 h1:OEa+SqW79ZbZxjKzxZC149JZBM1To/460
 github.com/stephen-fox/launchctlutil v1.2.0/go.mod h1:6T2s/vDUsaN+VK51Hyc+4hRC6PMg9U+FxzyhHu3wgXo=
 golang.org/x/sys v0.0.0-20190204203706-41f3e6584952 h1:FDfvYgoVsA7TTZSbgiqjAbfPbK47CNHdWl3h/PJtii0=
 golang.org/x/sys v0.0.0-20190204203706-41f3e6584952/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
+golang.org/x/sys v0.0.0-20190730183949-1393eb018365 h1:SaXEMXhWzMJThc05vu6uh61Q245r4KaWMrsTedk0FDc=
 golang.org/x/sys v0.0.0-20190730183949-1393eb018365/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
