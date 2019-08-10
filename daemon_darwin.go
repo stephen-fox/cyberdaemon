@@ -46,6 +46,7 @@ func (o *darwinDaemon) Uninstall() error {
 		return err
 	}
 
+	// FYI: This call stops the daemon if it is running, and removes it.
 	return launchctlutil.Remove(configFilePath, o.config.GetKind())
 }
 
