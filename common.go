@@ -23,10 +23,12 @@ const (
 	Install   Command = "install"
 	Uninstall Command = "uninstall"
 
-	// ManualStart means that the daemon must be started manually
-	// after its installation completes. In addition, the operating
-	// system will not start the daemon when it loads it.
-	ManualStart StartType = "manual"
+	// StartImmediately means that the daemon will start immediately
+	// after it is installed, and will be subsequently started when the
+	// operating system loads the daemon.
+	//
+	// See StartOnLoad for a detailed explanation of this behavior.
+	StartImmediately StartType = "start_immediately"
 
 	// StartOnLoad means that the daemon will not start after its
 	// installation completes (with the exception of macOS). It will,
@@ -53,12 +55,10 @@ const (
 	// it will only start when the user logs in.
 	StartOnLoad StartType = "start_on_load"
 
-	// StartImmediately means that the daemon will start immediately
-	// after it is installed, and will be subsequently started when the
-	// operating system loads the daemon.
-	//
-	// See StartOnLoad for a detailed explanation of this behavior.
-	StartImmediately StartType = "start_immediately"
+	// ManualStart means that the daemon must be started manually
+	// after its installation completes. In addition, the operating
+	// system will not start the daemon when it loads it.
+	ManualStart StartType = "manual"
 )
 
 // Status represents the status of a daemon.
