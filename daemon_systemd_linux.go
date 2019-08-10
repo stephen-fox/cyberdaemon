@@ -93,19 +93,17 @@ func (o *systemdDaemon) Stop() error {
 }
 
 func (o *systemdDaemon) RunUntilExit(logic ApplicationLogic) error {
+	// Only do native log things when running non-interactively.
 	// The 'PS1' environment variable will be empty / not set when
 	// this is run non-interactively.
-	if len(os.Getenv("PS1")) == 0 {
-		// Only do native log things when running non-interactively.
-		if o.logConfig.UseNativeLogger {
-			log.SetOutput(os.Stderr)
-			log.SetFlags(0)
+	if o.logConfig.UseNativeLogger && len(os.Getenv("PS1")) == 0 {
+		log.SetOutput(os.Stderr)
+		log.SetFlags(0)
 
-			if o.logConfig.NativeLogFlags > 0 {
-				originalLogFlags := log.Flags()
-				log.SetFlags(o.logConfig.NativeLogFlags)
-				defer log.SetFlags(originalLogFlags)
-			}
+		if o.logConfig.NativeLogFlags > 0 {
+			originalLogFlags := log.Flags()
+			log.SetFlags(o.logConfig.NativeLogFlags)
+			defer log.SetFlags(originalLogFlags)
 		}
 	}
 
