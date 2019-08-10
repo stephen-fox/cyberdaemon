@@ -29,11 +29,17 @@ func NewDaemon(config Config) (Daemon, error) {
 	}
 
 	output, _, _ := runDaemonCli(servicePath)
-	if strings.HasPrefix(output, "Usage: service <") {
-		return newSystemvDaemon(exePath, config, servicePath)
+	if !strings.HasPrefix(output, "Usage: service <") {
+		return nil, fmt.Errorf("'%s' did not produce expected output", servicePath)
 	}
 
-	return nil, fmt.Errorf("failed to determine linux daemon type after checking for systemd and system v")
+	isRedhat := true
+	i, redhatStatErr := os.Stat("/etc/redhat-release")
+	if redhatStatErr != nil || i.IsDir() {
+		isRedhat = false
+	}
+
+	return newSystemvDaemon(exePath, config, servicePath, isRedhat)
 }
 
 func searchForExeInPaths(exeName string, dirSearchPaths []string) (string, error) {
