@@ -58,6 +58,7 @@ type ApplicationLogic interface {
 //  - Enabling the daemon when it is installed, or started
 //    (e.g., 'systemctl enable <whatever>', or Windows service's
 //    autostart feature)
+//  - Start the daemon after installing it
 //  - Rename 'Username' field to 'RunAs'
 //  - Support OS specific options
 type Config struct {
