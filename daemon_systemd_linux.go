@@ -98,6 +98,9 @@ func (o *systemdDaemon) RunUntilExit(logic ApplicationLogic) error {
 	// this is run non-interactively.
 	if o.logConfig.UseNativeLogger && len(os.Getenv("PS1")) == 0 {
 		log.SetOutput(os.Stderr)
+		// systemd logs automatically append a timestamp. We can
+		// disable the go logger's timestamp by setting log flags
+		// to 0.
 		log.SetFlags(0)
 
 		if o.logConfig.NativeLogFlags > 0 {
