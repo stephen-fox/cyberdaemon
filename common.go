@@ -103,6 +103,7 @@ type ApplicationLogic interface {
 //  - Manually setting daemon executable file path
 //  - Support OS specific options
 //  - Optionally remove configuration file if install fails
+//  - Make the 'RunAs' field functional
 type Config struct {
 	DaemonId    string
 	Description string
