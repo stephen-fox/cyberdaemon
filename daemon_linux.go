@@ -7,14 +7,16 @@ import (
 	"strings"
 )
 
+// TODO: Provide a means to override the daemon CLI executable path. Also,
+//  search some common directories for the executable after trying defaults.
 func NewDaemon(config Config) (Daemon, error) {
 	exePath, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
 
-	if isSystemd() {
-		return nil, fmt.Errorf("systemd is currently unsupported")
+	if _, systemctlExitCode, _ := runDaemonCli(defaultSystemdExePath); systemctlExitCode == 0 {
+		return newSystemdDaemon(exePath, config, defaultSystemdExePath)
 	}
 
 	servicePath, err := serviceExePath()
@@ -22,7 +24,7 @@ func NewDaemon(config Config) (Daemon, error) {
 		return nil, err
 	}
 
-	output, _, _ := runServiceCommand(servicePath)
+	output, _, _ := runDaemonCli(servicePath)
 	if strings.HasPrefix(output, "Usage: service <") {
 		return newSystemvDaemon(exePath, config, servicePath)
 	}
@@ -30,11 +32,15 @@ func NewDaemon(config Config) (Daemon, error) {
 	return nil, fmt.Errorf("failed to determine linux daemon type after checking for systemd and system v")
 }
 
-func isSystemd() bool {
-	_, err := exec.Command("/bin/systemctl").CombinedOutput()
+func runDaemonCli(exePath string, args ...string) (string, int, error) {
+	s := exec.Command(exePath, args...)
+	output, err := s.CombinedOutput()
+	trimmedOutput := strings.TrimSpace(string(output))
 	if err != nil {
-		return false
+		return trimmedOutput, s.ProcessState.ExitCode(),
+			fmt.Errorf("failed to execute '%s %s' - %s - output: %s",
+				exePath, args, err.Error(), trimmedOutput)
 	}
 
-	return true
+	return trimmedOutput, s.ProcessState.ExitCode(), nil
 }

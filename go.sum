@@ -1,3 +1,5 @@
+github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f h1:JOrtw2xFKzlg+cbHpyrpLDmnN1HqhBfnX7WDiW7eG2c=
+github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f/go.mod h1:F5haX7vjVVG0kc13fIWeqUViNPyEJxv/OmvnBo0Yme4=
 github.com/stephen-fox/launchctlutil v1.1.0 h1:rP4476CDy8CQFntHcfxIqHoYLmfK9OP9wOUqq2GCC9o=
 github.com/stephen-fox/launchctlutil v1.1.0/go.mod h1:6T2s/vDUsaN+VK51Hyc+4hRC6PMg9U+FxzyhHu3wgXo=
 github.com/stephen-fox/launchctlutil v1.2.0 h1:OEa+SqW79ZbZxjKzxZC149JZBM1To/460wzIAI1lpe4=
