@@ -112,6 +112,13 @@ func (o *windowsDaemon) Uninstall() error {
 	}
 	defer s.Close()
 
+	// Attempt to stop the service before removing it.
+	// Windows does not stop the service's process when
+	// the service is deleted. Do not bother checking
+	// the error because there is nothing to do if the
+	// stop fails.
+	stopAndWait(s)
+
 	err = s.Delete()
 	if err != nil {
 		return err
