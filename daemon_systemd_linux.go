@@ -12,7 +12,11 @@ import (
 )
 
 const (
-	defaultSystemdExePath = "/bin/systemctl"
+	systemctlExeName = "systemctl"
+)
+
+var (
+	systemctlExeDirPaths = []string{"/bin"}
 )
 
 // TODO: Support systemctl enable / disable.

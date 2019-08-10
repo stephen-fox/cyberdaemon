@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 )
 
@@ -15,11 +16,14 @@ func NewDaemon(config Config) (Daemon, error) {
 		return nil, err
 	}
 
-	if _, systemctlExitCode, _ := runDaemonCli(defaultSystemdExePath); systemctlExitCode == 0 {
-		return newSystemdDaemon(exePath, config, defaultSystemdExePath)
+	systemctlPath, findErr := searchForExeInPaths(systemctlExeName, systemctlExeDirPaths)
+	if findErr == nil {
+		if _, systemctlExitCode, _ := runDaemonCli(systemctlPath); systemctlExitCode == 0 {
+			return newSystemdDaemon(exePath, config, systemctlPath)
+		}
 	}
 
-	servicePath, err := serviceExePath()
+	servicePath, err := searchForExeInPaths(serviceExeName, serviceExeDirPaths)
 	if err != nil {
 		return nil, err
 	}
@@ -30,6 +34,19 @@ func NewDaemon(config Config) (Daemon, error) {
 	}
 
 	return nil, fmt.Errorf("failed to determine linux daemon type after checking for systemd and system v")
+}
+
+func searchForExeInPaths(exeName string, dirSearchPaths []string) (string, error) {
+	for i := range dirSearchPaths {
+		filePath := path.Join(dirSearchPaths[i], exeName)
+		info, err := os.Stat(filePath)
+		if err == nil && !info.IsDir() {
+			return filePath, nil
+		}
+	}
+
+	return "", fmt.Errorf("failed to locate '%s' executable in the following directory paths: %v",
+		exeName, dirSearchPaths)
 }
 
 func runDaemonCli(exePath string, args ...string) (string, int, error) {

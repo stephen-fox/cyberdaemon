@@ -278,14 +278,15 @@ exit $?
 	pidFilePathPlaceholder      = placeholderDelim + "PID_FILE_PATH" + placeholderDelim
 	placeholderDelim            = "^"
 
+	serviceExeName   = "service"
 	pidFilePerm      = 0644
 	runAsDaemonMagic = "CYBERDAEMON_RESERVED_DAEMONIZE_R3OGMOJ405FMHT"
 )
 
 var (
-	serviceExePaths = []string{
-		"/sbin/service",
-		"/usr/sbin/service",
+	serviceExeDirPaths = []string{
+		"/sbin",
+		"/usr/sbin",
 	}
 )
 
@@ -518,15 +519,4 @@ func newSystemvDaemon(exePath string, config Config, serviceExePath string) (*sy
 		initFilePath: fmt.Sprintf("/etc/init.d/%s", config.DaemonId),
 		pidFilePath:  pidFilePath,
 	}, nil
-}
-
-func serviceExePath() (string, error) {
-	for i := range serviceExePaths {
-		info, err := os.Stat(serviceExePaths[i])
-		if err == nil && !info.IsDir() {
-			return serviceExePaths[i], nil
-		}
-	}
-
-	return "", fmt.Errorf("failed to locate 'service' binary at the following paths: %v", serviceExePaths)
 }
