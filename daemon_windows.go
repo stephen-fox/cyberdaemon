@@ -15,7 +15,8 @@ import (
 )
 
 type windowsDaemon struct {
-	config Config
+	config       Config
+	winStartType uint32
 }
 
 func (o *windowsDaemon) Status() (Status, error) {
@@ -57,14 +58,6 @@ func (o *windowsDaemon) Status() (Status, error) {
 }
 
 func (o *windowsDaemon) Install() error {
-	var winStartType uint32
-	switch o.config.StartType {
-	case StartImmediately, StartOnLoad:
-		winStartType = mgr.StartAutomatic
-	default:
-		winStartType = mgr.StartManual
-	}
-
 	m, err := mgr.Connect()
 	if err != nil {
 		return err
@@ -74,7 +67,7 @@ func (o *windowsDaemon) Install() error {
 	c := mgr.Config{
 		DisplayName: o.config.DaemonId,
 		Description: o.config.Description,
-		StartType:   winStartType,
+		StartType:   o.winStartType,
 	}
 
 	exePath, err := os.Executable()
@@ -333,8 +326,17 @@ func (o *serviceWrapper) startStopErr() error {
 }
 
 func NewDaemon(config Config) (Daemon, error) {
+	var winStartType uint32
+	switch config.StartType {
+	case StartImmediately, StartOnLoad:
+		winStartType = mgr.StartAutomatic
+	default:
+		winStartType = mgr.StartManual
+	}
+
 	return &windowsDaemon{
-		config: config,
+		config:       config,
+		winStartType: winStartType,
 	}, nil
 }
 
