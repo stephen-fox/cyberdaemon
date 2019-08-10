@@ -65,6 +65,7 @@ func main() {
 	daemon, err := cyberdaemon.NewDaemon(cyberdaemon.Config{
 		DaemonId:    daemonId,
 		Description: description,
+		StartType:   cyberdaemon.StartImmediately,
 		LogConfig:   cyberdaemon.LogConfig{
 			UseNativeLogger: true,
 		},
