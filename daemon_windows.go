@@ -15,7 +15,8 @@ import (
 )
 
 type windowsDaemon struct {
-	config Config
+	config       Config
+	winStartType uint32
 }
 
 func (o *windowsDaemon) Status() (Status, error) {
@@ -66,8 +67,7 @@ func (o *windowsDaemon) Install() error {
 	c := mgr.Config{
 		DisplayName: o.config.DaemonId,
 		Description: o.config.Description,
-		// TODO: Make service start type customizable.
-		StartType:   mgr.StartAutomatic,
+		StartType:   o.winStartType,
 	}
 
 	exePath, err := os.Executable()
@@ -81,6 +81,14 @@ func (o *windowsDaemon) Install() error {
 		return err
 	}
 	defer s.Close()
+
+	if o.config.StartType == StartImmediately {
+		err := s.Start()
+		if err != nil {
+			s.Delete()
+			return err
+		}
+	}
 
 	err = eventlog.InstallAsEventCreate(o.config.DaemonId, eventlog.Error|eventlog.Warning|eventlog.Info)
 	if err != nil {
@@ -103,6 +111,13 @@ func (o *windowsDaemon) Uninstall() error {
 		return err
 	}
 	defer s.Close()
+
+	// Attempt to stop the service before removing it.
+	// Windows does not stop the service's process when
+	// the service is deleted. Do not bother checking
+	// the error because there is nothing to do if the
+	// stop fails.
+	stopAndWait(s)
 
 	err = s.Delete()
 	if err != nil {
@@ -318,8 +333,17 @@ func (o *serviceWrapper) startStopErr() error {
 }
 
 func NewDaemon(config Config) (Daemon, error) {
+	var winStartType uint32
+	switch config.StartType {
+	case StartImmediately, StartOnLoad:
+		winStartType = mgr.StartAutomatic
+	default:
+		winStartType = mgr.StartManual
+	}
+
 	return &windowsDaemon{
-		config: config,
+		config:       config,
+		winStartType: winStartType,
 	}, nil
 }
 

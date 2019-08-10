@@ -65,6 +65,7 @@ func main() {
 	daemon, err := cyberdaemon.NewDaemon(cyberdaemon.Config{
 		DaemonId:    daemonId,
 		Description: description,
+		StartType:   cyberdaemon.StartImmediately,
 		LogConfig:   cyberdaemon.LogConfig{
 			UseNativeLogger: true,
 		},
@@ -107,7 +108,7 @@ func (o *logic) Start() error {
 
 	err := os.MkdirAll(workDirPath, 0755)
 	if err != nil {
-		log.Fatalln(err.Error())
+		return err
 	}
 
 	f, err := os.OpenFile(path.Join(workDirPath, "filewriter-output.txt"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)

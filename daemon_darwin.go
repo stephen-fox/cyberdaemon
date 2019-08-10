@@ -46,6 +46,7 @@ func (o *darwinDaemon) Uninstall() error {
 		return err
 	}
 
+	// FYI: This call stops the daemon if it is running, and removes it.
 	return launchctlutil.Remove(configFilePath, o.config.GetKind())
 }
 
@@ -109,11 +110,22 @@ func NewDaemon(config Config) (Daemon, error) {
 		logFilePath = path.Join(os.Getenv("HOME"), "Library", "Logs", config.DaemonId, config.DaemonId + ".log")
 	}
 
+	// Caveat: launchd does not have any concept similar to
+	// 'systemctl enable'. You can only choose to run the job
+	// on load, when specific events occur - you cannot configure
+	// it to run on boot or login without making it start when
+	// launchd loads it.
+	runOnLoad := false
+	switch config.StartType {
+	case StartOnLoad, StartImmediately:
+		runOnLoad = true
+	}
+
 	// TODO: Make macOS options customizable.
 	lconfig, err := launchctlutil.NewConfigurationBuilder().
 		SetKind(launchctlutil.UserAgent).
 		SetLabel(config.DaemonId).
-		SetRunAtLoad(true).
+		SetRunAtLoad(runOnLoad).
 		SetCommand(exePath).
 		SetStandardErrorPath(logFilePath).
 		Build()

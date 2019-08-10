@@ -25,6 +25,7 @@ type systemdDaemon struct {
 	daemonId      string
 	unitFilePath  string
 	unitContents  []byte
+	startType     StartType
 	logConfig     LogConfig
 }
 
@@ -57,15 +58,19 @@ func (o *systemdDaemon) Install() error {
 		return fmt.Errorf("failed to write systemd unit file - %s", err.Error())
 	}
 
-	_, _, err = runDaemonCli(o.systemctlPath, "enable", o.daemonId)
-	if err != nil {
-		return err
-	}
-
-	// TODO: If user specifies to start after installing.
-	err = o.Start()
-	if err != nil {
-		return err
+	switch o.startType {
+	case StartImmediately:
+		err := o.Start()
+		if err != nil {
+			return err
+		}
+		fallthrough
+	case StartOnLoad:
+		_, _, err = runDaemonCli(o.systemctlPath, "enable", o.daemonId)
+		if err != nil {
+			return err
+		}
+	case ManualStart:
 	}
 
 	return nil
@@ -167,5 +172,6 @@ func newSystemdDaemon(exePath string, config Config, systemctlPath string) (*sys
 		logConfig:     config.LogConfig,
 		unitFilePath:  fmt.Sprintf("/etc/systemd/system/%s.service", config.DaemonId),
 		unitContents:  unitContents,
+		startType:     config.StartType,
 	}, nil
 }

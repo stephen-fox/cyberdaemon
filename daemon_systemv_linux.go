@@ -279,6 +279,8 @@ exit $?
 	placeholderDelim            = "^"
 
 	serviceExeName   = "service"
+	chkconfigExeName = "chkconfig"
+	updatercdExeName = "update-rc.d"
 	pidFilePerm      = 0644
 	runAsDaemonMagic = "CYBERDAEMON_RESERVED_DAEMONIZE_R3OGMOJ405FMHT"
 )
@@ -290,14 +292,17 @@ var (
 	}
 )
 
-// TODO: Support chkconfig on / off?
 type systemvDaemon struct {
 	servicePath  string
 	daemonId     string
-	logConfig    LogConfig
 	initContents string
 	initFilePath string
 	pidFilePath  string
+	startType    StartType
+	isRedHat     bool
+	chkconfig    string
+	updatercd    string
+	logConfig    LogConfig
 }
 
 func (o *systemvDaemon) Status() (Status, error) {
@@ -324,7 +329,44 @@ func (o *systemvDaemon) Status() (Status, error) {
 }
 
 func (o *systemvDaemon) Install() error {
-	return ioutil.WriteFile(o.initFilePath, []byte(o.initContents), 0755)
+	err := ioutil.WriteFile(o.initFilePath, []byte(o.initContents), 0755)
+	if err != nil {
+		return fmt.Errorf("failed to write init.d script file - %s", err.Error())
+	}
+
+	switch o.startType {
+	case StartImmediately:
+		err := o.Start()
+		if err != nil {
+			return err
+		}
+		fallthrough
+	case StartOnLoad:
+		var err error
+		if o.isRedHat {
+			_, _, err = runDaemonCli(o.chkconfig, o.daemonId, "on",)
+		} else {
+			_, _, err = runDaemonCli(o.updatercd, o.daemonId, "defaults",)
+		}
+		if err != nil {
+			return err
+		}
+	case ManualStart:
+		// By default, Linux sets system v services to auto start after
+		// installation completes. We need to tell the OS to disable
+		// auto start when the user requests that the daemon
+		// only start manually.
+		if o.isRedHat {
+			_, _, err = runDaemonCli(o.chkconfig, o.daemonId, "off",)
+		} else {
+			_, _, err = runDaemonCli(o.updatercd, o.daemonId, "disable",)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (o *systemvDaemon) Uninstall() error {
@@ -486,7 +528,7 @@ func isRunningAsDaemon() (bool, time.Duration, error) {
 	}
 }
 
-func newSystemvDaemon(exePath string, config Config, serviceExePath string) (*systemvDaemon, error) {
+func newSystemvDaemon(exePath string, config Config, serviceExePath string, isRedHat bool) (*systemvDaemon, error) {
 	var logFilePath string
 
 	if config.LogConfig.UseNativeLogger {
@@ -511,6 +553,17 @@ func newSystemvDaemon(exePath string, config Config, serviceExePath string) (*sy
 		return nil, fmt.Errorf("failed to replace all placeholders in daemon init.d script")
 	}
 
+	var enableCliToolPath string
+	var err error
+	if isRedHat {
+		enableCliToolPath, err = searchForExeInPaths(chkconfigExeName, serviceExeDirPaths)
+	} else {
+		enableCliToolPath, err = searchForExeInPaths(updatercdExeName, serviceExeDirPaths)
+	}
+	if err != nil {
+		return nil, err
+	}
+
 	return &systemvDaemon{
 		servicePath:  serviceExePath,
 		daemonId:     config.DaemonId,
@@ -518,5 +571,9 @@ func newSystemvDaemon(exePath string, config Config, serviceExePath string) (*sy
 		initContents: script,
 		initFilePath: fmt.Sprintf("/etc/init.d/%s", config.DaemonId),
 		pidFilePath:  pidFilePath,
+		startType:    config.StartType,
+		isRedHat:     isRedHat,
+		chkconfig:    enableCliToolPath,
+		updatercd:    enableCliToolPath,
 	}, nil
 }
