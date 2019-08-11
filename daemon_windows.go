@@ -14,6 +14,10 @@ import (
 	"time"
 )
 
+const (
+	notInstalledErr = "The specified service does not exist as an installed service."
+)
+
 type windowsController struct {
 	config       Config
 	winStartType uint32
@@ -28,6 +32,10 @@ func (o *windowsController) Status() (Status, error) {
 
 	s, err := m.OpenService(o.config.DaemonId)
 	if err != nil {
+		if err.Error() == notInstalledErr {
+			return NotInstalled, nil
+		}
+
 		return "", err
 	}
 	defer s.Close()
