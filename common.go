@@ -85,16 +85,14 @@ func (o StartType) string() string {
 	return string(o)
 }
 
-type Daemon interface {
+type Daemonizer interface {
+	RunUntilExit(Application) error
+}
+
+type Controller interface {
 	Status() (Status, error)
 	Install() error
 	Uninstall() error
-	Start() error
-	Stop() error
-	RunUntilExit(ApplicationLogic) error
-}
-
-type ApplicationLogic interface {
 	Start() error
 	Stop() error
 }
@@ -104,6 +102,7 @@ type ApplicationLogic interface {
 //  - Support OS specific options
 //  - Optionally remove configuration file if install fails
 //  - Make the 'RunAs' field functional
+//  - Optionally require that the daemon be stopped after uninstall?
 type Config struct {
 	DaemonId    string
 	Description string
@@ -134,39 +133,39 @@ func SupportedCommands() []string {
 	}
 }
 
-// Execute executes a daemon control command for the provided daemon.
-func Execute(command Command, daemon Daemon) (output string, err error) {
+// Execute executes a control command using the provided daemon controller.
+func Execute(command Command, controller Controller) (output string, err error) {
 	switch command {
 	case GetStatus:
-		status, err := daemon.Status()
+		status, err := controller.Status()
 		if err != nil {
 			return "", fmt.Errorf("failed to get daemon status - %s", err.Error())
 		}
 
 		return status.String(), nil
 	case Start:
-		err := daemon.Start()
+		err := controller.Start()
 		if err != nil {
 			return "", fmt.Errorf("failed to start daemon - %s", err.Error())
 		}
 
 		return "", nil
 	case Stop:
-		err := daemon.Stop()
+		err := controller.Stop()
 		if err != nil {
 			return "", fmt.Errorf("failed to stop daemon - %s", err.Error())
 		}
 
 		return "", nil
 	case Install:
-		err := daemon.Install()
+		err := controller.Install()
 		if err != nil {
 			return "", fmt.Errorf("failed to install daemon - %s", err.Error())
 		}
 
 		return "", nil
 	case Uninstall:
-		err := daemon.Uninstall()
+		err := controller.Uninstall()
 		if err != nil {
 			return "", fmt.Errorf("failed to uninstall daemon - %s", err.Error())
 		}

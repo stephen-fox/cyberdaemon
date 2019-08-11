@@ -12,13 +12,13 @@ import (
 	"github.com/stephen-fox/launchctlutil"
 )
 
-type darwinDaemon struct {
+type darwinController struct {
 	config            launchctlutil.Configuration
 	stderrLogFilePath string
 	logConfig         LogConfig
 }
 
-func (o *darwinDaemon) Status() (Status, error) {
+func (o *darwinController) Status() (Status, error) {
 	details, err := launchctlutil.CurrentStatus(o.config.GetLabel())
 	if err != nil {
 		return "", err
@@ -36,7 +36,7 @@ func (o *darwinDaemon) Status() (Status, error) {
 	return Unknown, nil
 }
 
-func (o *darwinDaemon) Install() error {
+func (o *darwinController) Install() error {
 	if o.logConfig.UseNativeLogger {
 		err := os.MkdirAll(path.Dir(o.stderrLogFilePath), 0700)
 		if err != nil {
@@ -47,7 +47,7 @@ func (o *darwinDaemon) Install() error {
 	return launchctlutil.Install(o.config)
 }
 
-func (o *darwinDaemon) Uninstall() error {
+func (o *darwinController) Uninstall() error {
 	configFilePath, err := o.config.GetFilePath()
 	if err != nil {
 		return err
@@ -57,15 +57,19 @@ func (o *darwinDaemon) Uninstall() error {
 	return launchctlutil.Remove(configFilePath, o.config.GetKind())
 }
 
-func (o *darwinDaemon) Start() error {
+func (o *darwinController) Start() error {
 	return launchctlutil.Start(o.config.GetLabel(), o.config.GetKind())
 }
 
-func (o *darwinDaemon) Stop() error {
+func (o *darwinController) Stop() error {
 	return launchctlutil.Stop(o.config.GetLabel(), o.config.GetKind())
 }
 
-func (o *darwinDaemon) RunUntilExit(logic ApplicationLogic) error {
+type darwinDaemon struct {
+	logConfig LogConfig
+}
+
+func (o *darwinDaemon) RunUntilExit(application Application) error {
 	// The 'PS1' environment variable will be empty / not set when
 	// this is run non-interactively. Only do native log things
 	// when running non-interactively.
@@ -79,7 +83,7 @@ func (o *darwinDaemon) RunUntilExit(logic ApplicationLogic) error {
 		}
 	}
 
-	err := logic.Start()
+	err := application.Start()
 	if err != nil {
 		return err
 	}
@@ -89,10 +93,10 @@ func (o *darwinDaemon) RunUntilExit(logic ApplicationLogic) error {
 	<-interruptsAndTerms
 	signal.Stop(interruptsAndTerms)
 
-	return logic.Stop()
+	return application.Stop()
 }
 
-func NewDaemon(config Config) (Daemon, error) {
+func NewController(config Config) (Controller, error) {
 	exePath, err := os.Executable()
 	if err != nil {
 		return nil, err
@@ -135,9 +139,15 @@ func NewDaemon(config Config) (Daemon, error) {
 		return nil, err
 	}
 
-	return &darwinDaemon{
+	return &darwinController{
 		config:            lconfig,
 		stderrLogFilePath: logFilePath,
 		logConfig:         config.LogConfig,
 	}, nil
+}
+
+func NewDaemonizer(logConfig LogConfig) Daemonizer {
+	return &darwinDaemon{
+		logConfig: logConfig,
+	}
 }

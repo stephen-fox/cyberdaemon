@@ -20,16 +20,15 @@ var (
 )
 
 // TODO: Support systemctl enable / disable.
-type systemdDaemon struct {
+type systemdController struct {
 	systemctlPath string
 	daemonId      string
 	unitFilePath  string
 	unitContents  []byte
 	startType     StartType
-	logConfig     LogConfig
 }
 
-func (o *systemdDaemon) Status() (Status, error) {
+func (o *systemdController) Status() (Status, error) {
 	initInfo, statErr := os.Stat(o.unitFilePath)
 	if statErr != nil || initInfo.IsDir() {
 		return NotInstalled, nil
@@ -52,7 +51,7 @@ func (o *systemdDaemon) Status() (Status, error) {
 	return Unknown, nil
 }
 
-func (o *systemdDaemon) Install() error {
+func (o *systemdController) Install() error {
 	err := ioutil.WriteFile(o.unitFilePath, o.unitContents, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write systemd unit file - %s", err.Error())
@@ -76,14 +75,16 @@ func (o *systemdDaemon) Install() error {
 	return nil
 }
 
-func (o *systemdDaemon) Uninstall() error {
-	// TODO: Should we do this before uninstalling other daemons?
+func (o *systemdController) Uninstall() error {
+	// Try to stop the daemon. Ignore any errors because it might be
+	// stopped already, or the stop failed (which there is nothing
+	// we can do.
 	o.Stop()
 
 	return os.Remove(o.unitFilePath)
 }
 
-func (o *systemdDaemon) Start() error {
+func (o *systemdController) Start() error {
 	_, _, err := runDaemonCli(o.systemctlPath, "start", o.daemonId)
 	if err != nil {
 		return err
@@ -92,7 +93,7 @@ func (o *systemdDaemon) Start() error {
 	return nil
 }
 
-func (o *systemdDaemon) Stop() error {
+func (o *systemdController) Stop() error {
 	_, _, err := runDaemonCli(o.systemctlPath, "stop", o.daemonId)
 	if err != nil {
 		return err
@@ -101,7 +102,11 @@ func (o *systemdDaemon) Stop() error {
 	return nil
 }
 
-func (o *systemdDaemon) RunUntilExit(logic ApplicationLogic) error {
+type systemdDaemonizer struct {
+	logConfig LogConfig
+}
+
+func (o *systemdDaemonizer) RunUntilExit(application Application) error {
 	// Only do native log things when running non-interactively.
 	// The 'PS1' environment variable will be empty / not set when
 	// this is run non-interactively.
@@ -119,7 +124,7 @@ func (o *systemdDaemon) RunUntilExit(logic ApplicationLogic) error {
 		}
 	}
 
-	err := logic.Start()
+	err := application.Start()
 	if err != nil {
 		return err
 	}
@@ -129,10 +134,10 @@ func (o *systemdDaemon) RunUntilExit(logic ApplicationLogic) error {
 	<-interruptsAndTerms
 	signal.Stop(interruptsAndTerms)
 
-	return logic.Stop()
+	return application.Stop()
 }
 
-func newSystemdDaemon(exePath string, config Config, systemctlPath string) (*systemdDaemon, error) {
+func newSystemController(exePath string, config Config, systemctlPath string) (*systemdController, error) {
 	unitOptions := []*unit.UnitOption{
 		{
 			Section: "Unit",
@@ -166,12 +171,17 @@ func newSystemdDaemon(exePath string, config Config, systemctlPath string) (*sys
 		return nil, fmt.Errorf("failed to read from unit reader - %s", err.Error())
 	}
 
-	return &systemdDaemon{
+	return &systemdController{
 		systemctlPath: systemctlPath,
 		daemonId:      config.DaemonId,
-		logConfig:     config.LogConfig,
 		unitFilePath:  fmt.Sprintf("/etc/systemd/system/%s.service", config.DaemonId),
 		unitContents:  unitContents,
 		startType:     config.StartType,
 	}, nil
+}
+
+func newSystemdDaemonizer(logConfig LogConfig) Daemonizer {
+	return &systemdDaemonizer{
+		logConfig: logConfig,
+	}
 }

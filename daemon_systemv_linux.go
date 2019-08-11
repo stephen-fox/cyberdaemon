@@ -292,7 +292,7 @@ var (
 	}
 )
 
-type systemvDaemon struct {
+type systemvController struct {
 	servicePath  string
 	daemonId     string
 	initContents string
@@ -305,7 +305,7 @@ type systemvDaemon struct {
 	logConfig    LogConfig
 }
 
-func (o *systemvDaemon) Status() (Status, error) {
+func (o *systemvController) Status() (Status, error) {
 	initInfo, statErr := os.Stat(o.initFilePath)
 	if statErr != nil || initInfo.IsDir() {
 		return NotInstalled, nil
@@ -328,7 +328,7 @@ func (o *systemvDaemon) Status() (Status, error) {
 	return Unknown, nil
 }
 
-func (o *systemvDaemon) Install() error {
+func (o *systemvController) Install() error {
 	err := ioutil.WriteFile(o.initFilePath, []byte(o.initContents), 0755)
 	if err != nil {
 		return fmt.Errorf("failed to write init.d script file - %s", err.Error())
@@ -369,14 +369,16 @@ func (o *systemvDaemon) Install() error {
 	return nil
 }
 
-func (o *systemvDaemon) Uninstall() error {
-	// TODO: Should we do this before uninstalling other daemons?
+func (o *systemvController) Uninstall() error {
+	// Try to stop the daemon. Ignore any errors because it might be
+	// stopped already, or the stop failed (which there is nothing
+	// we can do.
 	o.Stop()
 
 	return os.Remove(o.initFilePath)
 }
 
-func (o *systemvDaemon) Start() error {
+func (o *systemvController) Start() error {
 	_, _, err := runDaemonCli(o.servicePath, o.daemonId, "start")
 	if err != nil {
 		return err
@@ -385,7 +387,7 @@ func (o *systemvDaemon) Start() error {
 	return nil
 }
 
-func (o *systemvDaemon) Stop() error {
+func (o *systemvController) Stop() error {
 	_, _, err := runDaemonCli(o.servicePath, o.daemonId, "stop")
 	if err != nil {
 		return err
@@ -394,7 +396,11 @@ func (o *systemvDaemon) Stop() error {
 	return nil
 }
 
-func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
+type systemvDaemonizer struct {
+	logConfig LogConfig
+}
+
+func (o *systemvDaemonizer) RunUntilExit(application Application) error {
 	// The 'PS1' environment variable will be empty / not set when
 	// this is run non-interactively.
 	if len(os.Getenv("PS1")) == 0 {
@@ -474,15 +480,18 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 			return nil
 		}
 
+		// TODO: Fix PID file path.
+		pidFilePath := "/var/run/fixme.plz"
+
 		// Now we are running as a daemon.
-		err := ioutil.WriteFile(o.pidFilePath, []byte(fmt.Sprintf("%d\n", os.Getpid())), pidFilePerm)
+		err := ioutil.WriteFile(pidFilePath, []byte(fmt.Sprintf("%d\n", os.Getpid())), pidFilePerm)
 		if err != nil {
 			return fmt.Errorf("failed to write PID to PID file when daemonized - %s", err.Error())
 		}
-		defer os.Remove(o.pidFilePath)
+		defer os.Remove(pidFilePath)
 	}
 
-	err := logic.Start()
+	err := application.Start()
 	if err != nil {
 		return err
 	}
@@ -492,7 +501,7 @@ func (o *systemvDaemon) RunUntilExit(logic ApplicationLogic) error {
 	<-interruptsAndTerms
 	signal.Stop(interruptsAndTerms)
 
-	return logic.Stop()
+	return application.Stop()
 }
 
 func isRunningAsDaemon() (bool, time.Duration, error) {
@@ -528,7 +537,7 @@ func isRunningAsDaemon() (bool, time.Duration, error) {
 	}
 }
 
-func newSystemvDaemon(exePath string, config Config, serviceExePath string, isRedHat bool) (*systemvDaemon, error) {
+func newSystemvController(exePath string, config Config, serviceExePath string, isRedHat bool) (*systemvController, error) {
 	var logFilePath string
 
 	if config.LogConfig.UseNativeLogger {
@@ -564,7 +573,7 @@ func newSystemvDaemon(exePath string, config Config, serviceExePath string, isRe
 		return nil, err
 	}
 
-	return &systemvDaemon{
+	return &systemvController{
 		servicePath:  serviceExePath,
 		daemonId:     config.DaemonId,
 		logConfig:    config.LogConfig,

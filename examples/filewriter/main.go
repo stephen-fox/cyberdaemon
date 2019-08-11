@@ -58,24 +58,26 @@ func main() {
 		os.Exit(0)
 	}
 
-	daemonId := appName
+	daemonID := appName
 	if runtime.GOOS == "darwin" {
-		daemonId = fmt.Sprintf("com.github.stephen-fox.%s", appName)
+		daemonID = fmt.Sprintf("com.github.stephen-fox.%s", appName)
 	}
-	daemon, err := cyberdaemon.NewDaemon(cyberdaemon.Config{
-		DaemonId:    daemonId,
-		Description: description,
-		StartType:   cyberdaemon.StartImmediately,
-		LogConfig:   cyberdaemon.LogConfig{
-			UseNativeLogger: true,
-		},
-	})
-	if err != nil {
-		log.Fatalln(err.Error())
+	logConfig := cyberdaemon.LogConfig{
+		UseNativeLogger: true,
 	}
 
 	if len(*command) > 0 {
-		output, err := cyberdaemon.Execute(cyberdaemon.Command(*command), daemon)
+		controller, err := cyberdaemon.NewController(cyberdaemon.Config{
+			DaemonId:    daemonID,
+			Description: description,
+			StartType:   cyberdaemon.StartImmediately,
+			LogConfig:   logConfig,
+		})
+		if err != nil {
+			log.Fatalln(err.Error())
+		}
+
+		output, err := cyberdaemon.Execute(cyberdaemon.Command(*command), controller)
 		if err != nil {
 			log.Fatalln(err.Error())
 		}
@@ -87,19 +89,22 @@ func main() {
 		return
 	}
 
-	err = daemon.RunUntilExit(&logic{
-		stop: make(chan chan struct{}),
+	daemon := cyberdaemon.NewDaemonizer(logConfig)
+	err := daemon.RunUntilExit(&application{
+		daemonID: daemonID,
+		stop:     make(chan chan struct{}),
 	})
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
 }
 
-type logic struct {
-	stop chan chan struct{}
+type application struct {
+	daemonID string
+	stop     chan chan struct{}
 }
 
-func (o *logic) Start() error {
+func (o *application) Start() error {
 	workDirPath := "/tmp"
 	if runtime.GOOS == "windows" {
 		workDirPath = os.Getenv("TEMP")
@@ -121,7 +126,7 @@ func (o *logic) Start() error {
 	return nil
 }
 
-func (o *logic) Stop() error {
+func (o *application) Stop() error {
 	stopTimeout := 5 * time.Second
 	onStopTimeout := time.NewTimer(stopTimeout)
 	rejoin := make(chan struct{})
@@ -139,13 +144,17 @@ func (o *logic) Stop() error {
 			log.Println("rejoined on stop")
 			onRejoinTimeout.Stop()
 		case <-onRejoinTimeout.C:
-			return fmt.Errorf("app logic did not stop after %s", rejoinTimeout.String())
+			return fmt.Errorf("application did not stop after %s", rejoinTimeout.String())
 		}
 	case <-onStopTimeout.C:
-		return fmt.Errorf("app logic did not respond to stop after %s", stopTimeout.String())
+		return fmt.Errorf("application did not respond to stop after %s", stopTimeout.String())
 	}
 
 	return nil
+}
+
+func (o *application) WindowsDaemonID() string {
+	return o.daemonID
 }
 
 func updateFileLoop(f *os.File, stop chan chan struct{}) {
