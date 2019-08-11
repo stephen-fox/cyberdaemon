@@ -17,7 +17,7 @@ func NewController(config Config) (Controller, error) {
 	}
 
 	if systemctlPath, isSystemd := isSystemd(); isSystemd {
-		return newSystemController(exePath, config, systemctlPath)
+		return newSystemdController(exePath, config, systemctlPath)
 	}
 
 	servicePath, isRedHat, notVReason, isSystemv := isSystemv()
