@@ -19,7 +19,7 @@ var (
 	systemctlExeDirPaths = []string{"/bin"}
 )
 
-// TODO: Support systemctl enable / disable.
+// TODO: Support running as a different user ('--user').
 type systemdController struct {
 	systemctlPath string
 	daemonId      string
@@ -59,13 +59,19 @@ func (o *systemdController) Install() error {
 
 	switch o.startType {
 	case StartImmediately:
+		// TODO: This only works for system-level units. This needs to use
+		//  'systemctl --user daemon-reload' when dealing with userland.
+		_, _, err = runDaemonCli(o.systemctlPath, "daemon-reload")
+		if err != nil {
+			return err
+		}
 		err := o.Start()
 		if err != nil {
 			return err
 		}
 		fallthrough
 	case StartOnLoad:
-		_, _, err = runDaemonCli(o.systemctlPath, "enable", o.daemonId)
+		_, _, err := runDaemonCli(o.systemctlPath, "enable", o.daemonId)
 		if err != nil {
 			return err
 		}
@@ -81,7 +87,19 @@ func (o *systemdController) Uninstall() error {
 	// we can do.
 	o.Stop()
 
-	return os.Remove(o.unitFilePath)
+	err := os.Remove(o.unitFilePath)
+	if err != nil {
+		return err
+	}
+
+	// TODO: This only works for system-level units. This needs to use
+	//  'systemctl --user daemon-reload' when dealing with userland.
+	_, _, err = runDaemonCli(o.systemctlPath, "daemon-reload")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (o *systemdController) Start() error {
