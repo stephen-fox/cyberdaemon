@@ -12,7 +12,6 @@ import (
 	"path"
 	"strings"
 	"syscall"
-	"time"
 )
 
 const (
@@ -67,7 +66,7 @@ if [ -z "${RUN_AS}" ]
 then
 	RUN_AS="root"
 fi
-PID_FILE_PATH="` + pidFilePathPlaceholder + `"
+` + pidFilePathVar + `="` + pidFilePathPlaceholder + `"
 
 runlevel=$(set -- $(runlevel); eval "echo \$$#" )
 
@@ -282,7 +281,7 @@ exit $?
 	chkconfigExeName = "chkconfig"
 	updatercdExeName = "update-rc.d"
 	pidFilePerm      = 0644
-	runAsDaemonMagic = "CYBERDAEMON_RESERVED_DAEMONIZE_R3OGMOJ405FMHT"
+	pidFilePathVar   = "PID_FILE_PATH"
 )
 
 var (
@@ -297,7 +296,6 @@ type systemvController struct {
 	daemonId     string
 	initContents string
 	initFilePath string
-	pidFilePath  string
 	startType    StartType
 	isRedHat     bool
 	chkconfig    string
@@ -415,32 +413,15 @@ func (o *systemvDaemonizer) RunUntilExit(application Application) error {
 			}
 		}
 
-		// TODO: Super hack. We need to fork so we can do things
-		//  like check the PID file, check configuration, etc. and
-		//  then go to the background. However, go cannot fork...
-		//  Instead, we can use exec to start a new process.
-		//  The problem with that is the code needs a way to
-		//  determine if it should start a new process, or continue
-		//  running as-is.
-		//  Without "some state", the code will just exec itself
-		//  forever (in other words, it needs to know when it is
-		//  the exec'd process).
-		//  Using the PID file is not really an option without
-		//  writing something that is not a PID to the file.
-		//  I do not want to risk reinterpretation by ps, or
-		//  another utility.
-		//  The remaining solutions are:
-		//   - set a reserved env. variable on the new process
-		//   - pass a reserved value to the new process via stdin
-		//   - determine parent process / group?
-		//  Originally, I felt that using an environment variable
-		//  was the least complicated and most minimal hack. After
-		//  further consideration, I feel that using stdin is
-		//  cleaner, and has the least probability of being
-		//  exploited. It is slower, and more brittle, but reading
-		//  a known / reserved environment variable seems more
-		//  easily exploitable to me.
-		if isDaemon, _, _ := isRunningAsDaemon(); !isDaemon {
+		// Check if init.d started us. If it did, then we need to
+		// forkexec (AKA, start a new process and exit this one).
+		// We do this because init.d expects the process to fork and
+		// not block.
+		//
+		// Golang cannot fork because forking only provides the new
+		// process with a single thread. The runtime needs more than
+		// one thread to run - so that is not an option.
+		if initdScriptPath, startedByInitd, err := isInitdOurParent(); startedByInitd {
 			exePath, err := os.Executable()
 			if err != nil {
 				return fmt.Errorf("failed to get executable path when exec'ing daemon - %s", err.Error())
@@ -449,46 +430,64 @@ func (o *systemvDaemonizer) RunUntilExit(application Application) error {
 			// TODO: Just use 'os.Args[0]' as the path?
 			daemon := exec.Command(exePath, os.Args[1:]...)
 			if o.logConfig.UseNativeLogger {
+				// Set stderr of new process to the current
+				// stderr so that input redirection will
+				// be honored.
 				daemon.Stderr = os.Stderr
 			}
 
-			pipe, err := daemon.StdinPipe()
-			if err != nil {
-				return fmt.Errorf("failed to open pipe to daemon process's stdin - %s", err.Error())
+			// Either get the PID file from the init.d script,
+			// or try a sane default.
+			// TODO: Document this business logic in documentation for
+			//  users that want to use their own init.d script.
+			pidFilePath, findErr := pidFilePathFromInitdScript(initdScriptPath)
+			if findErr != nil {
+				pidFilePath = defaultPidFilePath(path.Base(initdScriptPath))
 			}
 
-			writeErr := make(chan error)
-			go func(errs chan error, writer io.WriteCloser) {
-				_, err := writer.Write([]byte(runAsDaemonMagic + "\n"))
-				writer.Close()
-				errs <- err
-			}(writeErr, pipe)
+			pidFile, err := os.OpenFile(pidFilePath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, pidFilePerm)
+			if err != nil {
+				return fmt.Errorf("failed to open pid file - %s", err.Error())
+			}
+
+			// Pass the PID file to the process as file
+			// descriptor number 3 (per the 'ExtraFiles'
+			// documentation).
+			daemon.ExtraFiles = []*os.File{pidFile}
 
 			err = daemon.Start()
 			if err != nil {
 				return fmt.Errorf("failed to exec daemon process - %s", err.Error())
 			}
 
-			err = <-writeErr
-			if err != nil {
-				return fmt.Errorf("failed to write daemon run command to daemon process's stdin - %s", err.Error())
-			}
-
 			// Exit.
 			// TODO: Should we just os.Exit() here? Can we trust
 			//  the implementer to properly structure their code?
 			return nil
+		} else if err != nil {
+			return fmt.Errorf("failed to determine if init.d started the process - %s", err.Error())
 		}
 
-		// TODO: Fix PID file path.
-		pidFilePath := "/var/run/fixme.plz"
+		// Now we are running as a daemon. File descriptor 3 will be
+		// the PID file.
+		pidFile := os.NewFile(3, "")
+		if pidFile == nil {
+			return fmt.Errorf("failed to open pid file passed to daemon - file descriptor might of been crushed?")
+		}
 
-		// Now we are running as a daemon.
-		err := ioutil.WriteFile(pidFilePath, []byte(fmt.Sprintf("%d\n", os.Getpid())), pidFilePerm)
+		_, err := pidFile.WriteString(fmt.Sprintf("%d\n", os.Getpid()))
 		if err != nil {
-			return fmt.Errorf("failed to write PID to PID file when daemonized - %s", err.Error())
+			return fmt.Errorf("failed to write pid to pid file as daemon - %s", err.Error())
 		}
-		defer os.Remove(pidFilePath)
+		defer func() {
+			// Debian does not remove the PID file for us
+			// (perhaps other OSes might not either).
+			// Delete the contents of the file so the OS
+			// knows the process stopped cleanly.
+			pidFile.Seek(0, 0)
+			pidFile.Truncate(0)
+			pidFile.Close()
+		}()
 	}
 
 	err := application.Start()
@@ -504,36 +503,61 @@ func (o *systemvDaemonizer) RunUntilExit(application Application) error {
 	return application.Stop()
 }
 
-func isRunningAsDaemon() (bool, time.Duration, error) {
-	start := time.Now()
-
-	type r struct {
-		isDaemon bool
-		err      error
+func isInitdOurParent() (string, bool, error) {
+	// The 'cmdline' file contains the command line arguments of the
+	// process separated by null. We can derive whether init.d started
+	// us or not by examining the file's contents.
+	parentCmdline, err := os.Open(fmt.Sprintf("/proc/%d/cmdline", os.Getppid()))
+	if err != nil {
+		return "", false, fmt.Errorf("failed to open parent process's cmdline file - %s", err.Error())
 	}
 
-	results := make(chan r, 1)
-	go func(results chan r) {
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
-			results <- r{
-				isDaemon: scanner.Text() == runAsDaemonMagic,
+	parentCmdlineContents, err := ioutil.ReadAll(io.LimitReader(parentCmdline, 100000))
+	if err != nil {
+		return "", false, fmt.Errorf("failed to read cmdline of parent process - %s", err.Error())
+	}
+
+	splitContents := strings.Split(string(parentCmdlineContents), "\x00")
+	for i := range splitContents {
+		switch i {
+		case 0, 1, 2, 3:
+			if strings.HasPrefix(splitContents[i], "/etc/init.d/") {
+				return splitContents[i], true, nil
 			}
-			return
 		}
+	}
 
-		results <- r{
-			err: scanner.Err(),
+	return "", false, nil
+}
+
+func pidFilePathFromInitdScript(scriptPath string) (string, error) {
+	f, err := os.Open(scriptPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open init.d script for parsing - %s", err.Error())
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(io.LimitReader(f, 100000))
+	prefix := pidFilePathVar + "="
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, prefix) {
+			return strings.Trim(strings.TrimPrefix(line, prefix), "\"'"), nil
 		}
-	}(results)
+	}
 
-	timeout := time.NewTimer(50 * time.Millisecond)
-	select {
-	case <-timeout.C:
-		return false, time.Since(start), nil
-	case res := <-results:
-		timeout.Stop()
-		return res.isDaemon, time.Since(start), res.err
+	err = scanner.Err()
+	if err != nil {
+		return "", fmt.Errorf("failed to scan init.d script - %s", err.Error())
+	}
+
+	return "", fmt.Errorf("failed to find pid file path ('%s') in init.d script", prefix)
+}
+
+func newSystemvDaemonizer(logConfig LogConfig) Daemonizer {
+	return &systemvDaemonizer{
+		logConfig: logConfig,
 	}
 }
 
@@ -547,15 +571,12 @@ func newSystemvController(exePath string, config Config, serviceExePath string, 
 		logFilePath = path.Join("/var/log", config.DaemonId, config.DaemonId + ".log")
 	}
 
-	// PID file path example: '/var/run/mydaemon/mydaemon.pid'.
-	pidFilePath := fmt.Sprintf("/var/run/%s/%s.pid", config.DaemonId, config.DaemonId)
-
 	replacer := strings.NewReplacer(serviceNamePlaceholder, config.DaemonId,
 		shortDescriptionPlaceholder, fmt.Sprintf("%s daemon.", config.DaemonId),
 		descriptionPlaceholder, config.Description,
 		exePathPlaceholder, exePath,
 		logFilePathPlaceholder, logFilePath,
-		pidFilePathPlaceholder, pidFilePath)
+		pidFilePathPlaceholder, defaultPidFilePath(config.DaemonId))
 
 	script := replacer.Replace(systemvTemplate)
 	if strings.Contains(script, placeholderDelim) {
@@ -579,10 +600,14 @@ func newSystemvController(exePath string, config Config, serviceExePath string, 
 		logConfig:    config.LogConfig,
 		initContents: script,
 		initFilePath: fmt.Sprintf("/etc/init.d/%s", config.DaemonId),
-		pidFilePath:  pidFilePath,
 		startType:    config.StartType,
 		isRedHat:     isRedHat,
 		chkconfig:    enableCliToolPath,
 		updatercd:    enableCliToolPath,
 	}, nil
+}
+
+// PID file path example: '/var/run/mydaemon/mydaemon.pid'.
+func defaultPidFilePath(serviceName string) string {
+	return fmt.Sprintf("/var/run/%s/%s.pid", serviceName, serviceName)
 }
