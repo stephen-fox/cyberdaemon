@@ -65,11 +65,11 @@ func (o *darwinController) Stop() error {
 	return launchctlutil.Stop(o.config.GetLabel(), o.config.GetKind())
 }
 
-type darwinDaemon struct {
+type darwinDaemonizer struct {
 	logConfig LogConfig
 }
 
-func (o *darwinDaemon) RunUntilExit(application Application) error {
+func (o *darwinDaemonizer) RunUntilExit(application Application) error {
 	// The 'PS1' environment variable will be empty / not set when
 	// this is run non-interactively. Only do native log things
 	// when running non-interactively.
@@ -147,7 +147,7 @@ func NewController(config Config) (Controller, error) {
 }
 
 func NewDaemonizer(logConfig LogConfig) Daemonizer {
-	return &darwinDaemon{
+	return &darwinDaemonizer{
 		logConfig: logConfig,
 	}
 }
