@@ -35,7 +35,7 @@ func NewDaemonizer(logConfig LogConfig) Daemonizer {
 
 	// TODO: What if this is not a system v machine?
 	//  Return an error? Is this a sane default?
-	return newSystemdDaemonizer(logConfig)
+	return newSystemvDaemonizer(logConfig)
 }
 
 func isSystemd() (systemctlPath string, ok bool) {
