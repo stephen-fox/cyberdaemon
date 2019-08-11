@@ -30,7 +30,7 @@ func (o *windowsController) Status() (Status, error) {
 	}
 	defer m.Disconnect()
 
-	s, err := m.OpenService(o.config.DaemonId)
+	s, err := m.OpenService(o.config.DaemonID)
 	if err != nil {
 		if err.Error() == notInstalledErr {
 			return NotInstalled, nil
@@ -73,7 +73,7 @@ func (o *windowsController) Install() error {
 	defer m.Disconnect()
 
 	c := mgr.Config{
-		DisplayName: o.config.DaemonId,
+		DisplayName: o.config.DaemonID,
 		Description: o.config.Description,
 		StartType:   o.winStartType,
 	}
@@ -84,7 +84,7 @@ func (o *windowsController) Install() error {
 	}
 
 	// TODO: Support custom arguments.
-	s, err := m.CreateService(o.config.DaemonId, exePath, c)
+	s, err := m.CreateService(o.config.DaemonID, exePath, c)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func (o *windowsController) Install() error {
 		}
 	}
 
-	err = eventlog.InstallAsEventCreate(o.config.DaemonId, eventlog.Error|eventlog.Warning|eventlog.Info)
+	err = eventlog.InstallAsEventCreate(o.config.DaemonID, eventlog.Error|eventlog.Warning|eventlog.Info)
 	if err != nil {
 		s.Delete()
 		return err
@@ -114,7 +114,7 @@ func (o *windowsController) Uninstall() error {
 	}
 	defer m.Disconnect()
 
-	s, err := m.OpenService(o.config.DaemonId)
+	s, err := m.OpenService(o.config.DaemonID)
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (o *windowsController) Uninstall() error {
 		return err
 	}
 
-	err = eventlog.Remove(o.config.DaemonId)
+	err = eventlog.Remove(o.config.DaemonID)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (o *windowsController) Start() error {
 	}
 	defer m.Disconnect()
 
-	s, err := m.OpenService(o.config.DaemonId)
+	s, err := m.OpenService(o.config.DaemonID)
 	if err != nil {
 		return err
 	}
@@ -168,7 +168,7 @@ func (o *windowsController) Stop() error {
 	}
 	defer m.Disconnect()
 
-	s, err := m.OpenService(o.config.DaemonId)
+	s, err := m.OpenService(o.config.DaemonID)
 	if err != nil {
 		return err
 	}

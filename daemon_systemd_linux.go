@@ -22,7 +22,7 @@ var (
 // TODO: Support running as a different user ('--user').
 type systemdController struct {
 	systemctlPath string
-	daemonId      string
+	daemonID      string
 	unitFilePath  string
 	unitContents  []byte
 	startType     StartType
@@ -34,7 +34,7 @@ func (o *systemdController) Status() (Status, error) {
 		return NotInstalled, nil
 	}
 
-	_, exitCode, statusErr := runDaemonCli(o.systemctlPath,"status", o.daemonId)
+	_, exitCode, statusErr := runDaemonCli(o.systemctlPath,"status", o.daemonID)
 	if statusErr != nil {
 		switch exitCode {
 		case 3:
@@ -71,7 +71,7 @@ func (o *systemdController) Install() error {
 		}
 		fallthrough
 	case StartOnLoad:
-		_, _, err := runDaemonCli(o.systemctlPath, "enable", o.daemonId)
+		_, _, err := runDaemonCli(o.systemctlPath, "enable", o.daemonID)
 		if err != nil {
 			return err
 		}
@@ -103,7 +103,7 @@ func (o *systemdController) Uninstall() error {
 }
 
 func (o *systemdController) Start() error {
-	_, _, err := runDaemonCli(o.systemctlPath, "start", o.daemonId)
+	_, _, err := runDaemonCli(o.systemctlPath, "start", o.daemonID)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func (o *systemdController) Start() error {
 }
 
 func (o *systemdController) Stop() error {
-	_, _, err := runDaemonCli(o.systemctlPath, "stop", o.daemonId)
+	_, _, err := runDaemonCli(o.systemctlPath, "stop", o.daemonID)
 	if err != nil {
 		return err
 	}
@@ -191,8 +191,8 @@ func newSystemdController(exePath string, config Config, systemctlPath string) (
 
 	return &systemdController{
 		systemctlPath: systemctlPath,
-		daemonId:      config.DaemonId,
-		unitFilePath:  fmt.Sprintf("/etc/systemd/system/%s.service", config.DaemonId),
+		daemonID:      config.DaemonID,
+		unitFilePath:  fmt.Sprintf("/etc/systemd/system/%s.service", config.DaemonID),
 		unitContents:  unitContents,
 		startType:     config.StartType,
 	}, nil

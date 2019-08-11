@@ -104,7 +104,7 @@ type Controller interface {
 //  - Make the 'RunAs' field functional
 //  - Optionally require that the daemon be stopped after uninstall?
 type Config struct {
-	DaemonId    string
+	DaemonID    string
 	Description string
 	RunAs       string
 	StartType   StartType

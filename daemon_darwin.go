@@ -103,7 +103,7 @@ func NewController(config Config) (Controller, error) {
 	}
 
 	// TODO: Allow user to provide reverse DNS prefix using OS option.
-	if strings.Count(config.DaemonId, ".") < 2 {
+	if strings.Count(config.DaemonID, ".") < 2 {
 		return nil, fmt.Errorf("daemon ID must be in reverse DNS format on macOS")
 	}
 
@@ -113,7 +113,7 @@ func NewController(config Config) (Controller, error) {
 		// TODO: Support user, or system logs.
 		// TODO: Use a friendly name for the log directory
 		//  and file name.
-		logFilePath = path.Join(os.Getenv("HOME"), "Library", "Logs", config.DaemonId, config.DaemonId + ".log")
+		logFilePath = path.Join(os.Getenv("HOME"), "Library", "Logs", config.DaemonID, config.DaemonID+ ".log")
 	}
 
 	// Caveat: launchd does not have any concept similar to
@@ -130,7 +130,7 @@ func NewController(config Config) (Controller, error) {
 	// TODO: Make macOS options customizable.
 	lconfig, err := launchctlutil.NewConfigurationBuilder().
 		SetKind(launchctlutil.UserAgent).
-		SetLabel(config.DaemonId).
+		SetLabel(config.DaemonID).
 		SetRunAtLoad(runOnLoad).
 		SetCommand(exePath).
 		SetStandardErrorPath(logFilePath).

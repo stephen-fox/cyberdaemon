@@ -293,7 +293,7 @@ var (
 
 type systemvController struct {
 	servicePath  string
-	daemonId     string
+	daemonID     string
 	initContents string
 	initFilePath string
 	startType    StartType
@@ -309,7 +309,7 @@ func (o *systemvController) Status() (Status, error) {
 		return NotInstalled, nil
 	}
 
-	_, exitCode, statusErr := runDaemonCli(o.servicePath, o.daemonId, "status")
+	_, exitCode, statusErr := runDaemonCli(o.servicePath, o.daemonID, "status")
 	if statusErr != nil {
 		switch exitCode {
 		case 3:
@@ -342,9 +342,9 @@ func (o *systemvController) Install() error {
 	case StartOnLoad:
 		var err error
 		if o.isRedHat {
-			_, _, err = runDaemonCli(o.chkconfig, o.daemonId, "on",)
+			_, _, err = runDaemonCli(o.chkconfig, o.daemonID, "on",)
 		} else {
-			_, _, err = runDaemonCli(o.updatercd, o.daemonId, "defaults",)
+			_, _, err = runDaemonCli(o.updatercd, o.daemonID, "defaults",)
 		}
 		if err != nil {
 			return err
@@ -355,9 +355,9 @@ func (o *systemvController) Install() error {
 		// auto start when the user requests that the daemon
 		// only start manually.
 		if o.isRedHat {
-			_, _, err = runDaemonCli(o.chkconfig, o.daemonId, "off",)
+			_, _, err = runDaemonCli(o.chkconfig, o.daemonID, "off",)
 		} else {
-			_, _, err = runDaemonCli(o.updatercd, o.daemonId, "disable",)
+			_, _, err = runDaemonCli(o.updatercd, o.daemonID, "disable",)
 		}
 		if err != nil {
 			return err
@@ -377,7 +377,7 @@ func (o *systemvController) Uninstall() error {
 }
 
 func (o *systemvController) Start() error {
-	_, _, err := runDaemonCli(o.servicePath, o.daemonId, "start")
+	_, _, err := runDaemonCli(o.servicePath, o.daemonID, "start")
 	if err != nil {
 		return err
 	}
@@ -386,7 +386,7 @@ func (o *systemvController) Start() error {
 }
 
 func (o *systemvController) Stop() error {
-	_, _, err := runDaemonCli(o.servicePath, o.daemonId, "stop")
+	_, _, err := runDaemonCli(o.servicePath, o.daemonID, "stop")
 	if err != nil {
 		return err
 	}
@@ -568,15 +568,15 @@ func newSystemvController(exePath string, config Config, serviceExePath string, 
 		// Log file path example: '/var/log/mydaemon/mydaemon.log'.
 		// TODO: Use a friendly name for the log directory
 		//  and file name.
-		logFilePath = path.Join("/var/log", config.DaemonId, config.DaemonId + ".log")
+		logFilePath = path.Join("/var/log", config.DaemonID, config.DaemonID+ ".log")
 	}
 
-	replacer := strings.NewReplacer(serviceNamePlaceholder, config.DaemonId,
-		shortDescriptionPlaceholder, fmt.Sprintf("%s daemon.", config.DaemonId),
+	replacer := strings.NewReplacer(serviceNamePlaceholder, config.DaemonID,
+		shortDescriptionPlaceholder, fmt.Sprintf("%s daemon.", config.DaemonID),
 		descriptionPlaceholder, config.Description,
 		exePathPlaceholder, exePath,
 		logFilePathPlaceholder, logFilePath,
-		pidFilePathPlaceholder, defaultPidFilePath(config.DaemonId))
+		pidFilePathPlaceholder, defaultPidFilePath(config.DaemonID))
 
 	script := replacer.Replace(systemvTemplate)
 	if strings.Contains(script, placeholderDelim) {
@@ -596,10 +596,10 @@ func newSystemvController(exePath string, config Config, serviceExePath string, 
 
 	return &systemvController{
 		servicePath:  serviceExePath,
-		daemonId:     config.DaemonId,
+		daemonID:     config.DaemonID,
 		logConfig:    config.LogConfig,
 		initContents: script,
-		initFilePath: fmt.Sprintf("/etc/init.d/%s", config.DaemonId),
+		initFilePath: fmt.Sprintf("/etc/init.d/%s", config.DaemonID),
 		startType:    config.StartType,
 		isRedHat:     isRedHat,
 		chkconfig:    enableCliToolPath,
