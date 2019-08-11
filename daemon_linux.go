@@ -10,36 +10,63 @@ import (
 
 // TODO: Provide a means to override the daemon CLI executable path. Also,
 //  search some common directories for the executable after trying defaults.
-func NewDaemon(config Config) (Daemon, error) {
+func NewController(config Config) (Controller, error) {
 	exePath, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
 
+	if systemctlPath, isSystemd := isSystemd(); isSystemd {
+		return newSystemdController(exePath, config, systemctlPath)
+	}
+
+	servicePath, isRedHat, notVReason, isSystemv := isSystemv()
+	if isSystemv {
+		return newSystemvController(exePath, config, servicePath, isRedHat)
+	}
+
+	return nil, fmt.Errorf(notVReason)
+}
+
+func NewDaemonizer(logConfig LogConfig) Daemonizer {
+	if _, isSystemd := isSystemd(); isSystemd {
+		return newSystemdDaemonizer(logConfig)
+	}
+
+	// TODO: What if this is not a system v machine?
+	//  Return an error? Is this a sane default?
+	return newSystemvDaemonizer(logConfig)
+}
+
+func isSystemd() (systemctlPath string, ok bool) {
 	systemctlPath, findErr := searchForExeInPaths(systemctlExeName, systemctlExeDirPaths)
 	if findErr == nil {
 		if _, systemctlExitCode, _ := runDaemonCli(systemctlPath); systemctlExitCode == 0 {
-			return newSystemdDaemon(exePath, config, systemctlPath)
+			return systemctlPath, true
 		}
 	}
 
+	return "", false
+}
+
+func isSystemv() (servicePath string, isRedHat bool, whyNotSysV string, ok bool) {
 	servicePath, err := searchForExeInPaths(serviceExeName, serviceExeDirPaths)
 	if err != nil {
-		return nil, err
+		return "", false, err.Error(), false
 	}
 
 	output, _, _ := runDaemonCli(servicePath)
 	if !strings.HasPrefix(output, "Usage: service <") {
-		return nil, fmt.Errorf("'%s' did not produce expected output", servicePath)
+		return "", false,
+			fmt.Sprintf("'%s' did not produce expected output", servicePath), false
 	}
 
-	isRedhat := true
 	i, redhatStatErr := os.Stat("/etc/redhat-release")
 	if redhatStatErr != nil || i.IsDir() {
-		isRedhat = false
+		return servicePath, false, "", true
 	}
 
-	return newSystemvDaemon(exePath, config, servicePath, isRedhat)
+	return servicePath, true, "", true
 }
 
 func searchForExeInPaths(exeName string, dirSearchPaths []string) (string, error) {

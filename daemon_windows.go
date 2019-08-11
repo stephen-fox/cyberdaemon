@@ -14,20 +14,28 @@ import (
 	"time"
 )
 
-type windowsDaemon struct {
+const (
+	notInstalledErr = "The specified service does not exist as an installed service."
+)
+
+type windowsController struct {
 	config       Config
 	winStartType uint32
 }
 
-func (o *windowsDaemon) Status() (Status, error) {
+func (o *windowsController) Status() (Status, error) {
 	m, err := mgr.Connect()
 	if err != nil {
 		return "", err
 	}
 	defer m.Disconnect()
 
-	s, err := m.OpenService(o.config.DaemonId)
+	s, err := m.OpenService(o.config.DaemonID)
 	if err != nil {
+		if err.Error() == notInstalledErr {
+			return NotInstalled, nil
+		}
+
 		return "", err
 	}
 	defer s.Close()
@@ -57,7 +65,7 @@ func (o *windowsDaemon) Status() (Status, error) {
 	return Unknown, nil
 }
 
-func (o *windowsDaemon) Install() error {
+func (o *windowsController) Install() error {
 	m, err := mgr.Connect()
 	if err != nil {
 		return err
@@ -65,7 +73,7 @@ func (o *windowsDaemon) Install() error {
 	defer m.Disconnect()
 
 	c := mgr.Config{
-		DisplayName: o.config.DaemonId,
+		DisplayName: o.config.DaemonID,
 		Description: o.config.Description,
 		StartType:   o.winStartType,
 	}
@@ -76,7 +84,7 @@ func (o *windowsDaemon) Install() error {
 	}
 
 	// TODO: Support custom arguments.
-	s, err := m.CreateService(o.config.DaemonId, exePath, c)
+	s, err := m.CreateService(o.config.DaemonID, exePath, c)
 	if err != nil {
 		return err
 	}
@@ -90,7 +98,7 @@ func (o *windowsDaemon) Install() error {
 		}
 	}
 
-	err = eventlog.InstallAsEventCreate(o.config.DaemonId, eventlog.Error|eventlog.Warning|eventlog.Info)
+	err = eventlog.InstallAsEventCreate(o.config.DaemonID, eventlog.Error|eventlog.Warning|eventlog.Info)
 	if err != nil {
 		s.Delete()
 		return err
@@ -99,14 +107,14 @@ func (o *windowsDaemon) Install() error {
 	return nil
 }
 
-func (o *windowsDaemon) Uninstall() error {
+func (o *windowsController) Uninstall() error {
 	m, err := mgr.Connect()
 	if err != nil {
 		return err
 	}
 	defer m.Disconnect()
 
-	s, err := m.OpenService(o.config.DaemonId)
+	s, err := m.OpenService(o.config.DaemonID)
 	if err != nil {
 		return err
 	}
@@ -124,7 +132,7 @@ func (o *windowsDaemon) Uninstall() error {
 		return err
 	}
 
-	err = eventlog.Remove(o.config.DaemonId)
+	err = eventlog.Remove(o.config.DaemonID)
 	if err != nil {
 		return err
 	}
@@ -132,14 +140,14 @@ func (o *windowsDaemon) Uninstall() error {
 	return nil
 }
 
-func (o *windowsDaemon) Start() error {
+func (o *windowsController) Start() error {
 	m, err := mgr.Connect()
 	if err != nil {
 		return err
 	}
 	defer m.Disconnect()
 
-	s, err := m.OpenService(o.config.DaemonId)
+	s, err := m.OpenService(o.config.DaemonID)
 	if err != nil {
 		return err
 	}
@@ -153,14 +161,14 @@ func (o *windowsDaemon) Start() error {
 	return nil
 }
 
-func (o *windowsDaemon) Stop() error {
+func (o *windowsController) Stop() error {
 	m, err := mgr.Connect()
 	if err != nil {
 		return err
 	}
 	defer m.Disconnect()
 
-	s, err := m.OpenService(o.config.DaemonId)
+	s, err := m.OpenService(o.config.DaemonID)
 	if err != nil {
 		return err
 	}
@@ -174,14 +182,18 @@ func (o *windowsDaemon) Stop() error {
 	return nil
 }
 
-func (o *windowsDaemon) RunUntilExit(logic ApplicationLogic) error {
+type windowsDaemonizer struct {
+	logConfig LogConfig
+}
+
+func (o *windowsDaemonizer) RunUntilExit(application Application) error {
 	isInteractive, err := svc.IsAnInteractiveSession()
 	if err != nil {
 		return err
 	}
 
 	if isInteractive {
-		err = logic.Start()
+		err = application.Start()
 		if err != nil {
 			return err
 		}
@@ -191,17 +203,17 @@ func (o *windowsDaemon) RunUntilExit(logic ApplicationLogic) error {
 		<-interrupts
 		signal.Stop(interrupts)
 
-		return logic.Stop()
+		return application.Stop()
 	}
 
-	if o.config.LogConfig.UseNativeLogger {
-		events, err := eventlog.Open(o.config.DaemonId)
+	if o.logConfig.UseNativeLogger {
+		events, err := eventlog.Open(application.WindowsDaemonID())
 		if err != nil {
 			return err
 		}
 		originalLogFlags := log.Flags()
-		if o.config.LogConfig.NativeLogFlags > 0 {
-			log.SetFlags(o.config.LogConfig.NativeLogFlags)
+		if o.logConfig.NativeLogFlags > 0 {
+			log.SetFlags(o.logConfig.NativeLogFlags)
 		} else {
 			// Timestamps are provided by Windows event log by
 			// default. Set log flags to 0, thus disabling the
@@ -217,8 +229,8 @@ func (o *windowsDaemon) RunUntilExit(logic ApplicationLogic) error {
 	}
 
 	wrapper := serviceWrapper{
-		name:     o.config.DaemonId,
-		appLogic: logic,
+		name:     application.WindowsDaemonID(),
+		app:      application,
 		errMutex: &sync.Mutex{},
 	}
 
@@ -245,7 +257,7 @@ func (o eventLogWriter) Write(p []byte) (n int, err error) {
 
 type serviceWrapper struct {
 	name     string
-	appLogic ApplicationLogic
+	app      Application
 	errMutex *sync.Mutex
 	lastErr  error
 }
@@ -286,7 +298,7 @@ func (o *serviceWrapper) Execute(args []string, r <-chan svc.ChangeRequest, chan
 		State: svc.StartPending,
 	}
 
-	if err := o.appLogic.Start(); err != nil {
+	if err := o.app.Start(); err != nil {
 		o.setStartStopError(err)
 		return true, 1
 	}
@@ -306,7 +318,7 @@ loop:
 			changes <- svc.Status{
 				State: svc.StopPending,
 			}
-			if err := o.appLogic.Stop(); err != nil {
+			if err := o.app.Stop(); err != nil {
 				o.setStartStopError(err)
 				return true, 2
 			}
@@ -332,7 +344,7 @@ func (o *serviceWrapper) startStopErr() error {
 	return o.lastErr
 }
 
-func NewDaemon(config Config) (Daemon, error) {
+func NewController(config Config) (Controller, error) {
 	var winStartType uint32
 	switch config.StartType {
 	case StartImmediately, StartOnLoad:
@@ -341,10 +353,16 @@ func NewDaemon(config Config) (Daemon, error) {
 		winStartType = mgr.StartManual
 	}
 
-	return &windowsDaemon{
+	return &windowsController{
 		config:       config,
 		winStartType: winStartType,
 	}, nil
+}
+
+func NewDaemonizer(logConfig LogConfig) Daemonizer {
+	return &windowsDaemonizer{
+		logConfig: logConfig,
+	}
 }
 
 // stopAndWait based on stopAndWait by takama et al:
