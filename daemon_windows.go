@@ -229,9 +229,9 @@ func (o *windowsDaemonizer) RunUntilExit(application Application) error {
 	}
 
 	wrapper := serviceWrapper{
-		name:        application.WindowsDaemonID(),
-		application: application,
-		errMutex:    &sync.Mutex{},
+		name:     application.WindowsDaemonID(),
+		app:      application,
+		errMutex: &sync.Mutex{},
 	}
 
 	err = wrapper.runAndBlock()
@@ -256,10 +256,10 @@ func (o eventLogWriter) Write(p []byte) (n int, err error) {
 }
 
 type serviceWrapper struct {
-	name        string
-	application Application
-	errMutex    *sync.Mutex
-	lastErr     error
+	name     string
+	app      Application
+	errMutex *sync.Mutex
+	lastErr  error
 }
 
 // runAndBlock based on windowsDaemon.Run() method by kardianos et al:
@@ -298,7 +298,7 @@ func (o *serviceWrapper) Execute(args []string, r <-chan svc.ChangeRequest, chan
 		State: svc.StartPending,
 	}
 
-	if err := o.application.Start(); err != nil {
+	if err := o.app.Start(); err != nil {
 		o.setStartStopError(err)
 		return true, 1
 	}
@@ -318,7 +318,7 @@ loop:
 			changes <- svc.Status{
 				State: svc.StopPending,
 			}
-			if err := o.application.Stop(); err != nil {
+			if err := o.app.Stop(); err != nil {
 				o.setStartStopError(err)
 				return true, 2
 			}
