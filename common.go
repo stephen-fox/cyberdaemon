@@ -97,6 +97,12 @@ type Daemonizer interface {
 
 // Controller is an interface for controlling the state of a daemon.
 //
+// Be advised: Changing the state of a daemon requires super user privileges
+// in the following scenarios:
+//  - System daemons on all operating systems
+//  - User-run Windows daemons
+//  - User-run System V daemons
+//
 // A Controller is not used to turn your application into a daemon.
 // See the Daemonizer interface for turning your application into
 // a daemon.
