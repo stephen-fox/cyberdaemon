@@ -181,9 +181,8 @@ type LogConfig struct {
 	//  System daemon: /Library/Logs/com.github.myapp/com.github.myapp.log
 	//
 	// Windows provides the Event Log utility for saving log messages.
-	// This tool is used to save your daemon's logs. Log messages can
-	// be viewed using either the 'Event Viewer' GUI application, or
-	// by running:
+	// Log messages can be viewed using either the 'Event Viewer' GUI
+	// application, or by running:
 	//  TODO: Event viewer CLI command
 	UseNativeLogger bool
 
