@@ -95,14 +95,30 @@ type Daemonizer interface {
 	RunUntilExit(Application) error
 }
 
+// Controller is an interface for controlling the state of a daemon.
+//
+// A Controller is not used to turn your application into a daemon.
+// See the Daemonizer interface for turning your application into
+// a daemon.
 type Controller interface {
+	// Status returns the current status of the daemon.
 	Status() (Status, error)
+
+	// Install installs the daemon.
 	Install() error
+
+	// Uninstall stops and uninstalls the daemon.
 	Uninstall() error
+
+	// Start starts the daemon.
 	Start() error
+
+	// Stop stops the daemon.
 	Stop() error
 }
 
+// ControllerConfig configures a daemon Controller.
+//
 // TODO: Additional daemon configuration:
 //  - Manually setting daemon executable file path
 //  - Support OS specific options
