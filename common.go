@@ -163,9 +163,9 @@ type LogConfig struct {
 	// logging. This guarantees that your log messages will reach the
 	// native logging utility.
 	//
-	// On Linux, the native logger depends whether systemd or System V
-	// is used. On systemd systems, logs are managed by systemd, which
-	// saves stderr output. These logs are accessed by running:
+	// For Linux systems, the native logger depends on whether systemd
+	// or System V is used. Systemd saves stderr output from the daemon.
+	// These logs are accessed by running:
 	//  journalctl -u myapp
 	// You can add '-f' to the above command to display log messages
 	// as they are created.
