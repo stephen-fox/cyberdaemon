@@ -139,11 +139,11 @@ type ControllerConfig struct {
 	// Description is a short blurb describing your application.
 	Description string
 
-	// RunAs is the username to run as.
+	// RunAs is the user to run the daemon as.
 	//
 	// If left unset, the daemon will run as the following:
 	//  - root on unix systems
-	//  - administrator on Windows systems
+	//  - Administrator on Windows systems
 	RunAs string
 
 	// StartType specifies the daemon's start up behavior.
