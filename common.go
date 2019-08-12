@@ -39,17 +39,17 @@ const (
 	// system itself, or a normal user). This is explained in further
 	// detail below.
 	//
+	// On Linux - the answer is a bit complicated. On System V (init.d),
+	// the daemon will start when the operating system boots. This will
+	// happen regardless of the daemon being run by root, or by a normal
+	// user. On systemd machines, a system-owned daemon will start when
+	// the operating system boots. However, a user-owned daemon will only
+	// start when that user logs in.
+	//
 	// On macOS, this means the daemon will start when either the system
 	// boots (a system daemon), or when a user logs in (a user agent).
 	// Due to the way launchd works, the daemon will be started after
 	// installation finishes if this option is specified.
-	//
-	// On Linux - the answer is a bit more complicated. On System V
-	// (init.d), the daemon will start when the operating system boots.
-	// This will happen regardless of the daemon being run by root,
-	// or by a normal user. On systemd machines, a system-owned daemon
-	// will start when the operating system boots. However, a user-owned
-	// daemon will only start when that user logs in.
 	//
 	// On Windows, the daemon will start when the operating system
 	// boots. If the daemon is configured to run as a normal user,
