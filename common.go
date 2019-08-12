@@ -69,8 +69,7 @@ func (o Status) String() string {
 	return string(o)
 }
 
-// Command represents a command that can be issued to a daemon, or that can
-// control a daemon.
+// Command represents a command that can be issued to a daemon Controller.
 type Command string
 
 func (o Command) string() string {
