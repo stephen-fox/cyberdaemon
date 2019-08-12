@@ -86,9 +86,7 @@ func (o StartType) string() string {
 
 // Daemonizer provides methods for daemonizing your application code.
 //
-// Daemonizer does not control the state of a daemon (e.g., installation
-// or starting the daemon). See the Controller interface for daemon
-// control functionality.
+// See the Controller interface for controlling the state of a daemon.
 type Daemonizer interface {
 	// RunUntilExit runs the provided Application until the daemon
 	// is instructed to quit.
@@ -103,7 +101,6 @@ type Daemonizer interface {
 //  - User-run Windows daemons
 //  - User-run System V daemons
 //
-// A Controller is not used to turn your application into a daemon.
 // See the Daemonizer interface for turning your application into
 // a daemon.
 type Controller interface {
