@@ -129,8 +129,8 @@ type Controller interface {
 //  - Make the 'RunAs' field functional
 //  - Optionally require that the daemon be stopped after uninstall?
 type ControllerConfig struct {
-	// DaemonID is the string used to identify a daemon. The field's
-	// value should follow these rules:
+	// DaemonID is the string used to identify a daemon (for example,
+	// "MyApp"). The string must follow these rules:
 	//  - Contain no spaces or special characters
 	//  - On macOS, must be in reverse DNS format (e.g.,
 	//    com.github.thedude.myapp)
