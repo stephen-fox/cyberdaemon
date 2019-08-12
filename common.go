@@ -152,9 +152,43 @@ type ControllerConfig struct {
 	LogConfig LogConfig
 }
 
+// LogConfig configures the logging settings for the daemon.
 type LogConfig struct {
+	// UseNativeLogger specifies whether the operating system's native
+	// logging tool should be used. When set to 'true', implementers
+	// should use the standard library's 'log' package to facilitate
+	// logging. This guarantees that your log messages will reach the
+	// native logging utility.
+	//
+	// On Linux, the native logger depends whether systemd or System V
+	// is used. On systemd systems, logs are managed by systemd, which
+	// saves stderr output. These logs are accessed by running:
+	//  journalctl -u myapp
+	// You can add '-f' to the above command to display log messages
+	// as they are created.
+	// System V (init.d), however, does not provide a similar logging
+	// tool. If the daemon was installed using a Controller, the stderr
+	// output of the daemon will be redirected to a log file. This log
+	// file can be found at:
+	//  /var/log/myapp/myapp.log
+	//
+	// macOS, like System V, does not provide a logging tool. The stderr
+	// output of your daemon will be redirected to:
+	//  User daemon: ~/Library/Logs/com.github.myapp/com.github.myapp.log
+	//  System daemon: /Library/Logs/com.github.myapp/com.github.myapp.log
+	//
+	// Windows provides the Event Log utility for saving log messages.
+	// This tool is used to save your daemon's logs. Log messages can
+	// be viewed using either the 'Event Viewer' GUI application, or
+	// by running:
+	//  TODO: Event viewer CLI command
 	UseNativeLogger bool
-	NativeLogFlags  int
+
+	// NativeLogFlags specifies which log flags to use when UserNativeLogger
+	// is set to 'true'. The value must be greater than zero to take effect.
+	// See the standard library's 'log' package for more information about
+	// log flags.
+	NativeLogFlags int
 }
 
 // SupportedCommandsString returns a printable string that represents a list of
