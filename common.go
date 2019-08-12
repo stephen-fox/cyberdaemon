@@ -176,9 +176,10 @@ type LogConfig struct {
 	//  /var/log/myapp/myapp.log
 	//
 	// macOS, like System V, does not provide a logging tool. The stderr
-	// output of your daemon will be redirected to:
-	//  User daemon: ~/Library/Logs/com.github.myapp/com.github.myapp.log
-	//  System daemon: /Library/Logs/com.github.myapp/com.github.myapp.log
+	// output of system daemons will be redirected to:
+	//  /Library/Logs/com.github.myapp/com.github.myapp.log
+	// ... and user daemons will be saved to:
+	//  ~/Library/Logs/com.github.myapp/com.github.myapp.log
 	//
 	// Windows provides the Event Log utility for saving log messages.
 	// Log messages can be viewed using either the 'Event Viewer' GUI
