@@ -67,7 +67,7 @@ func main() {
 	}
 
 	if len(*command) > 0 {
-		controller, err := cyberdaemon.NewController(cyberdaemon.Config{
+		controller, err := cyberdaemon.NewController(cyberdaemon.ControllerConfig{
 			DaemonID:    daemonID,
 			Description: description,
 			StartType:   cyberdaemon.StartImmediately,

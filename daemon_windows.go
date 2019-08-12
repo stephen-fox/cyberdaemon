@@ -19,7 +19,7 @@ const (
 )
 
 type windowsController struct {
-	config       Config
+	config       ControllerConfig
 	winStartType uint32
 }
 
@@ -344,9 +344,9 @@ func (o *serviceWrapper) startStopErr() error {
 	return o.lastErr
 }
 
-func NewController(config Config) (Controller, error) {
+func NewController(controllerConfig ControllerConfig) (Controller, error) {
 	var winStartType uint32
-	switch config.StartType {
+	switch controllerConfig.StartType {
 	case StartImmediately, StartOnLoad:
 		winStartType = mgr.StartAutomatic
 	default:
@@ -354,7 +354,7 @@ func NewController(config Config) (Controller, error) {
 	}
 
 	return &windowsController{
-		config:       config,
+		config:       controllerConfig,
 		winStartType: winStartType,
 	}, nil
 }

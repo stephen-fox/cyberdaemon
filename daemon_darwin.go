@@ -96,24 +96,25 @@ func (o *darwinDaemonizer) RunUntilExit(application Application) error {
 	return application.Stop()
 }
 
-func NewController(config Config) (Controller, error) {
+func NewController(controllerConfig ControllerConfig) (Controller, error) {
 	exePath, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO: Allow user to provide reverse DNS prefix using OS option.
-	if strings.Count(config.DaemonID, ".") < 2 {
+	if strings.Count(controllerConfig.DaemonID, ".") < 2 {
 		return nil, fmt.Errorf("daemon ID must be in reverse DNS format on macOS")
 	}
 
 	var logFilePath string
 
-	if config.LogConfig.UseNativeLogger {
+	if controllerConfig.LogConfig.UseNativeLogger {
 		// TODO: Support user, or system logs.
 		// TODO: Use a friendly name for the log directory
 		//  and file name.
-		logFilePath = path.Join(os.Getenv("HOME"), "Library", "Logs", config.DaemonID, config.DaemonID+ ".log")
+		logFilePath = path.Join(os.Getenv("HOME"), "Library", "Logs",
+			controllerConfig.DaemonID, controllerConfig.DaemonID+ ".log")
 	}
 
 	// Caveat: launchd does not have any concept similar to
@@ -122,7 +123,7 @@ func NewController(config Config) (Controller, error) {
 	// it to run on boot or login without making it start when
 	// launchd loads it.
 	runOnLoad := false
-	switch config.StartType {
+	switch controllerConfig.StartType {
 	case StartOnLoad, StartImmediately:
 		runOnLoad = true
 	}
@@ -130,7 +131,7 @@ func NewController(config Config) (Controller, error) {
 	// TODO: Make macOS options customizable.
 	lconfig, err := launchctlutil.NewConfigurationBuilder().
 		SetKind(launchctlutil.UserAgent).
-		SetLabel(config.DaemonID).
+		SetLabel(controllerConfig.DaemonID).
 		SetRunAtLoad(runOnLoad).
 		SetCommand(exePath).
 		SetStandardErrorPath(logFilePath).
@@ -142,7 +143,7 @@ func NewController(config Config) (Controller, error) {
 	return &darwinController{
 		config:            lconfig,
 		stderrLogFilePath: logFilePath,
-		logConfig:         config.LogConfig,
+		logConfig:         controllerConfig.LogConfig,
 	}, nil
 }
 

@@ -10,19 +10,19 @@ import (
 
 // TODO: Provide a means to override the daemon CLI executable path. Also,
 //  search some common directories for the executable after trying defaults.
-func NewController(config Config) (Controller, error) {
+func NewController(controllerConfig ControllerConfig) (Controller, error) {
 	exePath, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
 
 	if systemctlPath, isSystemd := isSystemd(); isSystemd {
-		return newSystemdController(exePath, config, systemctlPath)
+		return newSystemdController(exePath, controllerConfig, systemctlPath)
 	}
 
 	servicePath, isRedHat, notVReason, isSystemv := isSystemv()
 	if isSystemv {
-		return newSystemvController(exePath, config, servicePath, isRedHat)
+		return newSystemvController(exePath, controllerConfig, servicePath, isRedHat)
 	}
 
 	return nil, fmt.Errorf(notVReason)

@@ -561,7 +561,7 @@ func newSystemvDaemonizer(logConfig LogConfig) Daemonizer {
 	}
 }
 
-func newSystemvController(exePath string, config Config, serviceExePath string, isRedHat bool) (*systemvController, error) {
+func newSystemvController(exePath string, config ControllerConfig, serviceExePath string, isRedHat bool) (*systemvController, error) {
 	var logFilePath string
 
 	if config.LogConfig.UseNativeLogger {

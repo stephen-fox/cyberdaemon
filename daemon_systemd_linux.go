@@ -155,7 +155,7 @@ func (o *systemdDaemonizer) RunUntilExit(application Application) error {
 	return application.Stop()
 }
 
-func newSystemdController(exePath string, config Config, systemctlPath string) (*systemdController, error) {
+func newSystemdController(exePath string, config ControllerConfig, systemctlPath string) (*systemdController, error) {
 	unitOptions := []*unit.UnitOption{
 		{
 			Section: "Unit",

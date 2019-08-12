@@ -103,7 +103,7 @@ type Controller interface {
 //  - Optionally remove configuration file if install fails
 //  - Make the 'RunAs' field functional
 //  - Optionally require that the daemon be stopped after uninstall?
-type Config struct {
+type ControllerConfig struct {
 	DaemonID    string
 	Description string
 	RunAs       string
