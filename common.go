@@ -211,6 +211,12 @@ func SupportedCommands() []string {
 }
 
 // Execute executes a control command using the provided daemon controller.
+// This helper function is used to turn raw user input (a command line
+// argument, for example) into a Controller execution. The function returns
+// any information that is associated with the Controller execution (e.g.,
+// the status of the daemon).
+//
+// Please review the Controller documentation for more information.
 func Execute(command Command, controller Controller) (output string, err error) {
 	switch command {
 	case GetStatus:
