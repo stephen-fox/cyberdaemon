@@ -64,13 +64,10 @@
 // 	- If so, where is the init.d script stored?
 //
 // If started by init.d, the daemon will attempt to parse the PID file path
-// from the init.d script by finding a variable named 'PID_FILE_PATH'. A PID
-// file is used to store the PID of the daemon so that the management script
-// can easily determine the status of the daemon. Both the init.d script and
-// the daemon need to know where this file is located (the script so that it
-// can read it, and the daemon so that it can write its PID to it). If the
-// daemon cannot find the PID file path in the init.d script, it uses
-// "/var/run/<daemon-id>/<daemon-id>.pid" as the path. It then opens the file
-// and starts a new instance of itself, which it passes the open PID file
-// descriptor to the new instance.
+// from the init.d script. A PID file is used to store the PID of the daemon
+// so that the management script can easily determine the status of the daemon.
+// Both the init.d script and the daemon need to know where this file is
+// located (the script so that it can read it, and the daemon so that it can
+// write its PID to it). If the daemon cannot find the PID file path in the
+// init.d script, it uses a sane default PID file path.
 package cyberdaemon

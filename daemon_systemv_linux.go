@@ -79,8 +79,7 @@ start() {
         check_dev_null
         log_daemon_msg "Starting ${SHORT_DESCRIPTION}" "${PROGRAM_NAME}" || true
     fi
-    mkdir -p "${PID_FILE_PATH%/*}"
-    chown -R "${RUN_AS}:${RUN_AS}" "${PID_FILE_PATH%/*}"
+    chown "${RUN_AS}:${RUN_AS}" "${PID_FILE_PATH}"
 	local logFilePath="` + logFilePathPlaceholder + `"
     if [ -z "${logFilePath}" ]
     then
@@ -609,5 +608,5 @@ func newSystemvController(exePath string, config ControllerConfig, serviceExePat
 
 // PID file path example: '/var/run/mydaemon/mydaemon.pid'.
 func defaultPidFilePath(serviceName string) string {
-	return fmt.Sprintf("/var/run/%s/%s.pid", serviceName, serviceName)
+	return fmt.Sprintf("/var/run/%s.pid", serviceName)
 }

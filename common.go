@@ -99,7 +99,7 @@ func (o StartType) string() string {
 // looking in the init.d script for a Bash variable named:
 // 	'PID_FILE_PATH'
 // If it cannot locate such a variable, it will use:
-// 	"/var/run/<init.d-script-name>/<init.d-script-name>.pid"
+// 	"/var/run/<init.d-script-name>.pid"
 //
 // Windows:
 // On Windows, developers must implement a method named 'WindowsDaemonID'
