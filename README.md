@@ -50,8 +50,8 @@ of an application that uses a Controller to control its daemon's state, and
 the Daemonizer interface to daemonize the application code.
 
 ## Design philosophies
-I made a few design decisions along the way that may seem non-obvious. This
-section will explain my thoughts on these decisions.
+I made a few design decisions along the way that are non-obvious. This section
+will explain my thoughts on these decisions.
 
 #### Why do I need to implement an interface?
 One of the most prominent decisions is requiring users to implement the
