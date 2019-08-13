@@ -193,12 +193,16 @@ type LogConfig struct {
 	// output of the daemon will be redirected to a log file. This log
 	// file can be found at:
 	// 	/var/log/myapp/myapp.log
+	// If a System V daemon was not installed using a controller, it will
+	// attempt to output logs to stderr.
 	//
-	// macOS, like System V, does not provide a logging tool. The stderr
-	// output of system daemons will be redirected to:
+	// macOS, like System V, does not provide a logging tool. If the daemon
+	// was installed using a Controller, its stderr will be redirected to:
 	// 	/Library/Logs/com.github.myapp/com.github.myapp.log
 	// ... and user daemons will be saved to:
 	// 	~/Library/Logs/com.github.myapp/com.github.myapp.log
+	// If a macOS daemon was not installed using a controller, it will
+	// attempt to output logs to stderr.
 	//
 	// Windows provides the Event Log utility for saving log messages.
 	// Log messages can be viewed using either the 'Event Viewer' GUI
