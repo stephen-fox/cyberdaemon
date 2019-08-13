@@ -119,9 +119,9 @@ type Daemonizer interface {
 //
 // Be advised: Changing the state of a daemon requires super user privileges
 // in the following scenarios:
-//  - System daemons on all operating systems
-//  - User-run Windows daemons
-//  - User-run System V daemons
+// 	- System daemons on all operating systems
+// 	- User-run Windows daemons
+// 	- User-run System V daemons
 type Controller interface {
 	// Status returns the current status of the daemon.
 	Status() (Status, error)
@@ -150,9 +150,9 @@ type Controller interface {
 type ControllerConfig struct {
 	// DaemonID is the string used to identify a daemon (for example,
 	// "MyApp"). The string must follow these rules:
-	//  - Contain no spaces or special characters
-	//  - On macOS, must be in reverse DNS format (e.g.,
-	//    com.github.thedude.myapp)
+	// 	- Contain no spaces or special characters
+	// 	- On macOS, must be in reverse DNS format (e.g.,
+	// 	com.github.thedude.myapp)
 	DaemonID string
 
 	// Description is a short blurb describing your application.
@@ -161,8 +161,8 @@ type ControllerConfig struct {
 	// RunAs is the user to run the daemon as.
 	//
 	// If left unset, the daemon will run as the following:
-	//  - root on unix systems
-	//  - Administrator on Windows systems
+	// 	- root on unix systems
+	// 	- Administrator on Windows systems
 	RunAs string
 
 	// StartType specifies the daemon's start up behavior.
@@ -185,25 +185,25 @@ type LogConfig struct {
 	// For Linux systems, the native logger depends on whether systemd
 	// or System V is used. Systemd saves stderr output from the daemon.
 	// These logs are accessed by running:
-	//  journalctl -u myapp
+	// 	journalctl -u myapp
 	// You can add '-f' to the above command to display log messages
 	// as they are created.
 	// System V (init.d), however, does not provide a similar logging
 	// tool. If the daemon was installed using a Controller, the stderr
 	// output of the daemon will be redirected to a log file. This log
 	// file can be found at:
-	//  /var/log/myapp/myapp.log
+	// 	/var/log/myapp/myapp.log
 	//
 	// macOS, like System V, does not provide a logging tool. The stderr
 	// output of system daemons will be redirected to:
-	//  /Library/Logs/com.github.myapp/com.github.myapp.log
+	// 	/Library/Logs/com.github.myapp/com.github.myapp.log
 	// ... and user daemons will be saved to:
-	//  ~/Library/Logs/com.github.myapp/com.github.myapp.log
+	// 	~/Library/Logs/com.github.myapp/com.github.myapp.log
 	//
 	// Windows provides the Event Log utility for saving log messages.
 	// Log messages can be viewed using either the 'Event Viewer' GUI
 	// application, or by running:
-	//  TODO: Event viewer CLI command
+	// 	TODO: Event viewer CLI command
 	UseNativeLogger bool
 
 	// NativeLogFlags specifies which log flags to use when UserNativeLogger
