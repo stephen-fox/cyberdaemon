@@ -59,5 +59,6 @@ working on this project:
 [daemon](https://github.com/takama/daemon) project
 - Daniel "kardianos" Theophanes for his excellent work on his
 [service](https://github.com/kardianos/service/) project
-- The [OpenSSH project](github.com/openssh/openssh-portable) contributors and
-maintainers for their sshd init.d script, which I based this project's on
+- The [OpenSSH project](https://github.com/openssh/openssh-portable)
+contributors and maintainers for their sshd init.d script, which I based this
+project's init.d script on
