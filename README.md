@@ -4,6 +4,8 @@ platform-agnostic daemon.
 
 ## Use cases
 
+## Supported systems
+
 ## API
 
 ## Design philosophies
