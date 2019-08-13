@@ -14,7 +14,7 @@ as turn your application code into a daemon.
     - systemd
     - System V (init.d) (if systemd is unavailable)
 - macOS
-    - launcd
+    - launchd
 - Windows
     - Windows service
 
