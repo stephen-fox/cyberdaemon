@@ -86,7 +86,29 @@ func (o StartType) string() string {
 
 // Daemonizer provides methods for daemonizing your application code.
 //
-// See the Controller interface for controlling the state of a daemon.
+// Gotchas
+//
+// There are several "gotchas" that implementers should be aware of when using
+// the Daemonizer.
+//
+// System V (init.d) on Linux:
+// A file known as a "PID file" is used to store the process ID of the running
+// daemon's process. Both the init.d script, and daemon must know where this
+// file is stored - the script to read it, and the daemon to update it. By
+// default, the System V Daemonizer will attempt to find the PID file by
+// looking in the init.d script for a Bash variable named:
+// 	'PID_FILE_PATH'
+// If it cannot locate such a variable, it will use:
+// 	"/var/run/<init.d-script-name>/<init.d-script-name>.pid"
+//
+// Windows:
+// On Windows, developers must implement a method named 'WindowsDaemonID'
+// in their Application implementations. The Windows build of this interface
+// differs from the unix variant by this one method. This is needed because
+// the Windows service manager needs to know the service name when starting
+// the daemon. This was implemented in the Application interface to make it
+// a compile-time error if developers try to build for Windows in addition
+// to other operating systems.
 type Daemonizer interface {
 	// RunUntilExit runs the provided Application until the daemon
 	// is instructed to quit.
@@ -100,9 +122,6 @@ type Daemonizer interface {
 //  - System daemons on all operating systems
 //  - User-run Windows daemons
 //  - User-run System V daemons
-//
-// See the Daemonizer interface for turning your application into
-// a daemon.
 type Controller interface {
 	// Status returns the current status of the daemon.
 	Status() (Status, error)
