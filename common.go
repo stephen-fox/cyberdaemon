@@ -39,17 +39,17 @@ const (
 	// system itself, or a normal user). This is explained in further
 	// detail below.
 	//
+	// On Linux - the answer is a bit complicated. On System V (init.d),
+	// the daemon will start when the operating system boots. This will
+	// happen regardless of the daemon being run by root, or by a normal
+	// user. On systemd machines, a system-owned daemon will start when
+	// the operating system boots. However, a user-owned daemon will only
+	// start when that user logs in.
+	//
 	// On macOS, this means the daemon will start when either the system
 	// boots (a system daemon), or when a user logs in (a user agent).
 	// Due to the way launchd works, the daemon will be started after
 	// installation finishes if this option is specified.
-	//
-	// On Linux - the answer is a bit more complicated. On System V
-	// (init.d), the daemon will start when the operating system boots.
-	// This will happen regardless of the daemon being run by root,
-	// or by a normal user. On systemd machines, a system-owned daemon
-	// will start when the operating system boots. However, a user-owned
-	// daemon will only start when that user logs in.
 	//
 	// On Windows, the daemon will start when the operating system
 	// boots. If the daemon is configured to run as a normal user,
@@ -69,8 +69,7 @@ func (o Status) String() string {
 	return string(o)
 }
 
-// Command represents a command that can be issued to a daemon, or that can
-// control a daemon.
+// Command represents a command that can be issued to a daemon Controller.
 type Command string
 
 func (o Command) string() string {
@@ -85,18 +84,63 @@ func (o StartType) string() string {
 	return string(o)
 }
 
+// Daemonizer provides methods for daemonizing your application code.
+//
+// Gotchas
+//
+// There are several "gotchas" that implementers should be aware of when using
+// the Daemonizer.
+//
+// System V (init.d) on Linux:
+// A file known as a "PID file" is used to store the process ID of the running
+// daemon's process. Both the init.d script, and daemon must know where this
+// file is stored - the script to read it, and the daemon to update it. By
+// default, the System V Daemonizer will attempt to find the PID file by
+// looking in the init.d script for a Bash variable named:
+// 	'PID_FILE_PATH'
+// If it cannot locate such a variable, it will use:
+// 	"/var/run/<init.d-script-name>/<init.d-script-name>.pid"
+//
+// Windows:
+// On Windows, developers must implement a method named 'WindowsDaemonID'
+// in their Application implementations. The Windows build of this interface
+// differs from the unix variant by this one method. This is needed because
+// the Windows service manager needs to know the service name when starting
+// the daemon. This was implemented in the Application interface to make it
+// a compile-time error if developers try to build for Windows in addition
+// to other operating systems.
 type Daemonizer interface {
+	// RunUntilExit runs the provided Application until the daemon
+	// is instructed to quit.
 	RunUntilExit(Application) error
 }
 
+// Controller is an interface for controlling the state of a daemon.
+//
+// Be advised: Changing the state of a daemon requires super user privileges
+// in the following scenarios:
+// 	- System daemons on all operating systems
+// 	- User-run Windows daemons
+// 	- User-run System V daemons
 type Controller interface {
+	// Status returns the current status of the daemon.
 	Status() (Status, error)
+
+	// Install installs the daemon.
 	Install() error
+
+	// Uninstall stops and uninstalls the daemon.
 	Uninstall() error
+
+	// Start starts the daemon.
 	Start() error
+
+	// Stop stops the daemon.
 	Stop() error
 }
 
+// ControllerConfig configures a daemon Controller.
+//
 // TODO: Additional daemon configuration:
 //  - Manually setting daemon executable file path
 //  - Support OS specific options
@@ -104,16 +148,73 @@ type Controller interface {
 //  - Make the 'RunAs' field functional
 //  - Optionally require that the daemon be stopped after uninstall?
 type ControllerConfig struct {
-	DaemonID    string
+	// DaemonID is the string used to identify a daemon (for example,
+	// "MyApp"). The string must follow these rules:
+	// 	- Contain no spaces or special characters
+	// 	- On macOS, must be in reverse DNS format (e.g.,
+	// 	com.github.thedude.myapp)
+	DaemonID string
+
+	// Description is a short blurb describing your application.
 	Description string
-	RunAs       string
-	StartType   StartType
-	LogConfig   LogConfig
+
+	// RunAs is the user to run the daemon as.
+	//
+	// If left unset, the daemon will run as the following:
+	// 	- root on unix systems
+	// 	- Administrator on Windows systems
+	RunAs string
+
+	// StartType specifies the daemon's start up behavior.
+	//
+	// If left unset, the daemon must be started manually.
+	StartType StartType
+
+	// LogConfig configures the logging settings for the daemon.
+	LogConfig LogConfig
 }
 
+// LogConfig configures the logging settings for the daemon.
 type LogConfig struct {
+	// UseNativeLogger specifies whether the operating system's native
+	// logging tool should be used. When set to 'true', implementers
+	// should use the standard library's 'log' package to facilitate
+	// logging. This guarantees that your log messages will reach the
+	// native logging utility.
+	//
+	// For Linux systems, the native logger depends on whether systemd
+	// or System V is used. Systemd saves stderr output from the daemon.
+	// These logs are accessed by running:
+	// 	journalctl -u myapp
+	// You can add '-f' to the above command to display log messages
+	// as they are created.
+	// System V (init.d), however, does not provide a similar logging
+	// tool. If the daemon was installed using a Controller, the stderr
+	// output of the daemon will be redirected to a log file. This log
+	// file can be found at:
+	// 	/var/log/myapp/myapp.log
+	// If a System V daemon was not installed using a controller, it will
+	// attempt to output logs to stderr.
+	//
+	// macOS, like System V, does not provide a logging tool. If the daemon
+	// was installed using a Controller, its stderr will be redirected to:
+	// 	/Library/Logs/com.github.myapp/com.github.myapp.log
+	// ... and user daemons will be saved to:
+	// 	~/Library/Logs/com.github.myapp/com.github.myapp.log
+	// If a macOS daemon was not installed using a controller, it will
+	// attempt to output logs to stderr.
+	//
+	// Windows provides the Event Log utility for saving log messages.
+	// Log messages can be viewed using either the 'Event Viewer' GUI
+	// application, or by running:
+	// 	TODO: Event viewer CLI command
 	UseNativeLogger bool
-	NativeLogFlags  int
+
+	// NativeLogFlags specifies which log flags to use when UserNativeLogger
+	// is set to 'true'. The value must be greater than zero to take effect.
+	// See the standard library's 'log' package for more information about
+	// log flags.
+	NativeLogFlags int
 }
 
 // SupportedCommandsString returns a printable string that represents a list of
@@ -134,6 +235,12 @@ func SupportedCommands() []string {
 }
 
 // Execute executes a control command using the provided daemon controller.
+// This helper function is used to turn raw user input (a command line
+// argument, for example) into a Controller execution. The function returns
+// any information that is associated with the Controller execution (e.g.,
+// the status of the daemon).
+//
+// Please review the Controller documentation for more information.
 func Execute(command Command, controller Controller) (output string, err error) {
 	switch command {
 	case GetStatus:

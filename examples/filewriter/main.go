@@ -1,6 +1,13 @@
 package main
 
-// This is an example daemon. Run with '-h' for more information.
+// This is an example daemon implemented using the cyberdaemon library.
+// When installed and running, the daemon writes to a file in the operating
+// system's temporary directory every few seconds. If run interactively
+// without any command line arguments, it will simply execute in the
+// foreground. Once the daemon is installed using the control command line
+// argument, it will run as a daemon.
+//
+// Run with '-h' for more information.
 
 import (
 	"flag"
@@ -19,7 +26,7 @@ const (
 	description = "An example daemon implemented using the cyberdaemon library."
 
 	daemonCommandArg = "command"
-	example = "example.exe -" + daemonCommandArg
+	example = "example -" + daemonCommandArg
 
 	usage = appName + `
 
@@ -46,8 +53,9 @@ The daemon can be uninstalled by running:
 )
 
 func main() {
-	command := flag.String(daemonCommandArg, "", "The daemon command to execute. This can be the following:\n" +
-		cyberdaemon.SupportedCommandsString())
+	command := flag.String(daemonCommandArg, "",
+		"The daemon control command to execute. This can be the following:\n" +
+			cyberdaemon.SupportedCommandsString())
 	help := flag.Bool("h", false, "Displays this help page")
 
 	flag.Parse()
@@ -55,17 +63,22 @@ func main() {
 	if *help {
 		fmt.Println(usage)
 		flag.PrintDefaults()
-		os.Exit(0)
+		os.Exit(1)
 	}
 
+	// The daemon ID is needed to identify the daemon.
 	daemonID := appName
 	if runtime.GOOS == "darwin" {
 		daemonID = fmt.Sprintf("com.github.stephen-fox.%s", appName)
 	}
+
+	// A LogConfig is used to configure the daemon's logging.
 	logConfig := cyberdaemon.LogConfig{
 		UseNativeLogger: true,
 	}
 
+	// If the user provided a control command on the command line,
+	// execute it and then exit.
 	if len(*command) > 0 {
 		controller, err := cyberdaemon.NewController(cyberdaemon.ControllerConfig{
 			DaemonID:    daemonID,
@@ -89,6 +102,7 @@ func main() {
 		return
 	}
 
+	// Daemonize the application.
 	daemon := cyberdaemon.NewDaemonizer(logConfig)
 	err := daemon.RunUntilExit(&application{
 		daemonID: daemonID,
