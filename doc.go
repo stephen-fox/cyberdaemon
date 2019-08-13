@@ -19,10 +19,12 @@
 // 	- Daemonizer
 // 	- Application
 //
-// The Controller is used to control the state of a daemon. It is used to
+// The Controller is used to control the state of a daemon. Implementations
 // communicate with the operating system's daemon management software to
 // query a daemon's status, start or stop it, and install and uninstall it.
-// A Controller is configured using the ControllerConfig struct.
+// A Controller is configured using the ControllerConfig struct. This struct
+// provides the necessary information about a daemon (such as its ID).
+// It also provides customization options, such as the start up type.
 //
 // Daemonizer is used to turn your application into a daemon. Implementations
 // of this interface use operating system specific calls and logic to properly
