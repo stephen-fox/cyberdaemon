@@ -50,15 +50,33 @@ of an application that uses the Controller to control its state, and the
 Daemonizer interface to daemonize the application.
 
 ## Design philosophies
+I made a few design decisions along the way that may seem non-obvious. This
+section will explain my thoughts on these decisions.
+
+#### Why do I need to implement an interface?
+One of the most prominent decisions is requiring users to implement the
+`Application` interface. The reasoning behind this is mainly due to operating
+system limitations (System V daemons need to fork exec, for example).
+In addition, I did not want to risk log output (e.g., `log.Println()`)
+occurring before the daemon can connect the logger to the operating system's
+logging tool. Even if the OS just collects stderr - there could be a race
+between the daemon starting and the application code running.
+
+#### Why are there so many interfaces?
+The use of interfaces is necessitated by the sheer number of operating systems.
+Separating the concerns of "how do I control the daemon?", and "how do I turn
+my code into a daemon?" seemed logical. I did not want to mix these two
+responsibilities. Also, many people consider it weird for a daemon to change
+its own state.
 
 ## Inspirations
 Special thanks and acknowledgement must be made for the following individuals.
 Their work was both inspirational and helpful for problem-solving ideas while
 working on this project:
-- Igor "takama" Dolzhikov for his awesome work on his
-[daemon](https://github.com/takama/daemon) project
-- Daniel "kardianos" Theophanes for his excellent work on his
-[service](https://github.com/kardianos/service/) project
+- [Igor "takama" Dolzhikov](https://github.com/takama) for his awesome work
+on his [daemon](https://github.com/takama/daemon) project
+- [Daniel "kardianos" Theophanes](https://github.com/kardianos) for his excellent
+work on his [service](https://github.com/kardianos/service) project
 - The [OpenSSH project](https://github.com/openssh/openssh-portable)
 contributors and maintainers for their sshd init.d script, which I based this
 project's init.d script on
