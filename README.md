@@ -37,7 +37,8 @@ of this interface use operating system specific calls and logic to properly
 run your code as a daemon. This is facilitated by the Application interface.
 Usage of a Controller is not required when using a Daemonizer. You may
 implement your own daemon management tooling while leveraging the Daemonizer
-to run your application.
+to run your application. Please review the "Gotchas" documentation in the
+Daemonizer interface if you choose to use your own management tooling.
 
 The Application interface is used by the Daemonizer to run your application
 code as a daemon. Implement this interface in your application and use the
