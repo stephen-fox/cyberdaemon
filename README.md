@@ -44,10 +44,10 @@ The Application interface is used by the Daemonizer to run your application
 code as a daemon. Implement this interface in your application and use the
 Daemonizer to run your program.
 
-#### Example daemon
+#### Example
 The [examples/filewriter](examples/filewriter/main.go) provides a basic example
-of an application that uses the Controller to control its state, and the
-Daemonizer interface to daemonize the application.
+of an application that uses a Controller to control its daemon's state, and
+the Daemonizer interface to daemonize the application code.
 
 ## Design philosophies
 I made a few design decisions along the way that may seem non-obvious. This
