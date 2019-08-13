@@ -5,7 +5,7 @@
 //
 // Linux:
 // 	- systemd
-// 	- System V (init.d)
+// 	- System V (init.d) (if systemd is unavailable)
 // macOS:
 // 	- launchd
 // Windows:
