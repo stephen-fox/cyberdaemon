@@ -79,8 +79,7 @@ start() {
         check_dev_null
         log_daemon_msg "Starting ${SHORT_DESCRIPTION}" "${PROGRAM_NAME}" || true
     fi
-    chown "${RUN_AS}:${RUN_AS}" "${PID_FILE_PATH}"
-	local logFilePath="` + logFilePathPlaceholder + `"
+    local logFilePath="` + logFilePathPlaceholder + `"
     if [ -z "${logFilePath}" ]
     then
         logFilePath=/dev/null
@@ -459,6 +458,11 @@ func (o *systemvDaemonizer) RunUntilExit(application Application) error {
 				return fmt.Errorf("failed to exec daemon process - %s", err.Error())
 			}
 
+			_, err = pidFile.WriteString(fmt.Sprintf("%d\n", daemon.Process.Pid))
+			if err != nil {
+				return fmt.Errorf("failed to write daemon pid to pid file - %s", err.Error())
+			}
+
 			// Exit.
 			// TODO: Should we just os.Exit() here? Can we trust
 			//  the implementer to properly structure their code?
@@ -472,11 +476,6 @@ func (o *systemvDaemonizer) RunUntilExit(application Application) error {
 		pidFile := os.NewFile(3, "")
 		if pidFile == nil {
 			return fmt.Errorf("failed to open pid file passed to daemon - file descriptor might of been crushed?")
-		}
-
-		_, err := pidFile.WriteString(fmt.Sprintf("%d\n", os.Getpid()))
-		if err != nil {
-			return fmt.Errorf("failed to write pid to pid file as daemon - %s", err.Error())
 		}
 		defer func() {
 			// Debian does not remove the PID file for us
