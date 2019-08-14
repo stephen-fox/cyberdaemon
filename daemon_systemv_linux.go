@@ -436,8 +436,6 @@ func (o *systemvDaemonizer) RunUntilExit(application Application) error {
 
 			// Either get the PID file from the init.d script,
 			// or try a sane default.
-			// TODO: Document this business logic in documentation for
-			//  users that want to use their own init.d script.
 			pidFilePath, findErr := pidFilePathFromInitdScript(initdScriptPath)
 			if findErr != nil {
 				pidFilePath = defaultPidFilePath(path.Base(initdScriptPath))
@@ -605,7 +603,7 @@ func newSystemvController(exePath string, config ControllerConfig, serviceExePat
 	}, nil
 }
 
-// PID file path example: '/var/run/mydaemon/mydaemon.pid'.
+// PID file path example: '/var/run/mydaemon.pid'.
 func defaultPidFilePath(serviceName string) string {
 	return fmt.Sprintf("/var/run/%s.pid", serviceName)
 }
