@@ -8,6 +8,14 @@ import (
 	"strings"
 )
 
+type errDaemonizer struct {
+	reason string
+}
+
+func (o *errDaemonizer) RunUntilExit(_ Application) error {
+	return fmt.Errorf("no suitable daemonization logic available for this system - %s", o.reason)
+}
+
 // TODO: Provide a means to override the daemon CLI executable path. Also,
 //  search some common directories for the executable after trying defaults.
 func NewController(controllerConfig ControllerConfig) (Controller, error) {
@@ -33,9 +41,14 @@ func NewDaemonizer(logConfig LogConfig) Daemonizer {
 		return newSystemdDaemonizer(logConfig)
 	}
 
-	// TODO: What if this is not a system v machine?
-	//  Return an error? Is this a sane default?
-	return newSystemvDaemonizer(logConfig)
+	_, _, notVReason, isSystemv := isSystemv()
+	if isSystemv {
+		return newSystemvDaemonizer(logConfig)
+	}
+
+	return &errDaemonizer{
+		reason: notVReason,
+	}
 }
 
 func isSystemd() (systemctlPath string, ok bool) {
