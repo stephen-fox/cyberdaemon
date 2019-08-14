@@ -507,6 +507,7 @@ func isInitdOurParent() (string, bool, error) {
 	if err != nil {
 		return "", false, fmt.Errorf("failed to open parent process's cmdline file - %s", err.Error())
 	}
+	defer parentCmdline.Close()
 
 	parentCmdlineContents, err := ioutil.ReadAll(io.LimitReader(parentCmdline, 100000))
 	if err != nil {
