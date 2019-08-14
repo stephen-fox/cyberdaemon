@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path"
+	"strconv"
 	"strings"
 	"syscall"
 )
@@ -61,7 +62,7 @@ fi
 PROGRAM_NAME="` + serviceNamePlaceholder + `"
 PROGRAM_PATH="` + exePathPlaceholder + `"
 ARGUMENTS=""
-RUN_AS=""
+RUN_AS="` + runAsPlaceholder + `"
 if [ -z "${RUN_AS}" ]
 then
 	RUN_AS="root"
@@ -92,7 +93,9 @@ start() {
     then
         $PROGRAM_PATH $ARGUMENTS 2> "$logFilePath"
     else
-        su $RUN_AS -c "$PROGRAM_PATH $ARGUMENTS  2> '$logFilePath'"
+        touch $PID_FILE_PATH
+        chown ${RUN_AS}:${RUN_AS} $PID_FILE_PATH
+        su $RUN_AS -c "$PROGRAM_PATH $ARGUMENTS 2> '$logFilePath'"
     fi
     r=$?
     if [ -n "${IS_REDHAT}" ]
@@ -273,6 +276,7 @@ exit $?
 	exePathPlaceholder          = placeholderDelim + "EXE_PATH" + placeholderDelim
 	logFilePathPlaceholder      = placeholderDelim + "LOG_FILE_PATH" + placeholderDelim
 	pidFilePathPlaceholder      = placeholderDelim + "PID_FILE_PATH" + placeholderDelim
+	runAsPlaceholder            = placeholderDelim + "RUN_AS" + placeholderDelim
 	placeholderDelim            = "^"
 
 	serviceExeName   = "service"
@@ -499,22 +503,62 @@ func (o *systemvDaemonizer) RunUntilExit(application Application) error {
 	return application.Stop()
 }
 
-func isInitdOurParent() (string, bool, error) {
+func isInitdOurParent() (scriptPath string, isInitd bool, err error) {
+	pid := os.Getppid()
+	for i := 0; i < 5; i++ {
+		if i != 0 {
+			pid, err = manualParentPid(pid)
+			if err != nil {
+				return "", false, err
+			}
+			if pid == 0 {
+				return "", false, nil
+			}
+		}
+
+		scriptPath, isInitd, err = isPidInitd(pid)
+		if err != nil {
+			return "", false, err
+		}
+
+		if isInitd {
+			return scriptPath, true, nil
+		}
+	}
+
+	return "", false, nil
+}
+
+func manualParentPid(pid int) (int, error) {
+	contents, err := tinyRead(fmt.Sprintf("/proc/%d/stat", pid))
+	if err != nil {
+		return 0, err
+	}
+
+	split := strings.Split(contents, " ")
+	if len(split) < 4 {
+		return 0, fmt.Errorf("stat file for pid %d has too few elements to get parent pid", pid)
+	}
+
+	parentPid, err := strconv.ParseUint(split[3], 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to convert parent pid for pid %d - %s", pid, err.Error())
+	}
+
+	return int(parentPid), nil
+}
+
+func isPidInitd(pid int) (scriptPath string, isInitd bool, err error) {
 	// The 'cmdline' file contains the command line arguments of the
-	// process separated by null. We can derive whether init.d started
-	// us or not by examining the file's contents.
-	parentCmdline, err := os.Open(fmt.Sprintf("/proc/%d/cmdline", os.Getppid()))
+	// process separated by null. We can derive whether the process
+	// is init.d by looking at its cmdline.
+	cmdlineContents, err := tinyRead(fmt.Sprintf("/proc/%d/cmdline", pid))
 	if err != nil {
-		return "", false, fmt.Errorf("failed to open parent process's cmdline file - %s", err.Error())
-	}
-	defer parentCmdline.Close()
-
-	parentCmdlineContents, err := ioutil.ReadAll(io.LimitReader(parentCmdline, 100000))
-	if err != nil {
-		return "", false, fmt.Errorf("failed to read cmdline of parent process - %s", err.Error())
+		return "", false, fmt.Errorf("failed to read cmdline for process %d - %s", pid, err.Error())
 	}
 
-	splitContents := strings.Split(string(parentCmdlineContents), "\x00")
+	// File contents are null terminated.
+	splitContents := strings.Split(string(cmdlineContents), "\x00")
 	for i := range splitContents {
 		switch i {
 		case 0, 1, 2, 3:
@@ -525,6 +569,21 @@ func isInitdOurParent() (string, bool, error) {
 	}
 
 	return "", false, nil
+}
+
+func tinyRead(filePath string) (string, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	contents, err := ioutil.ReadAll(io.LimitReader(f, 100000))
+	if err != nil {
+		return "", err
+	}
+
+	return string(contents), nil
 }
 
 func pidFilePathFromInitdScript(scriptPath string) (string, error) {
@@ -572,6 +631,7 @@ func newSystemvController(exePath string, config ControllerConfig, serviceExePat
 		shortDescriptionPlaceholder, fmt.Sprintf("%s daemon.", config.DaemonID),
 		descriptionPlaceholder, config.Description,
 		exePathPlaceholder, exePath,
+		runAsPlaceholder, config.RunAs,
 		logFilePathPlaceholder, logFilePath,
 		pidFilePathPlaceholder, defaultPidFilePath(config.DaemonID))
 
