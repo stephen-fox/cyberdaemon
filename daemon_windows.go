@@ -15,8 +15,34 @@ import (
 )
 
 const (
+	// PasswordOption is used to specify the password for a user when
+	// installing a daemon that will run as that user. Here is an example
+	// ControllerConfig that reads the user's password from an
+	// environment variable:
+	//
+	//	config := cyberdaemon.ControllerConfig{
+	//		DaemonID:              "test",
+	//		Description:           "I need my guys. They're the best.",
+	//		RunAs:                 ".\\stephen",
+	//		SystemSpecificOptions: map[cyberdaemon.SystemSpecificOption]interface{}{
+	//			cyberdaemon.PasswordOption: cyberdaemon.GetPassword(func() (string, error) {
+	//				p, ok := os.LookupEnv("WHYARETHEYTHEBEST")
+	//				if !ok {
+	//					return "", fmt.Errorf("password environment variable was not set")
+	//				}
+	//				return p, nil
+	//			}),
+	//		},
+	//	}
+	PasswordOption SystemSpecificOption = "password"
+
 	notInstalledErr = "The specified service does not exist as an installed service."
 )
+
+// GetPassword represents a function that will return a user's password when
+// installing a daemon that will run as that user. See the documentation for
+// PasswordOption for more information.
+type GetPassword func() (string, error)
 
 type windowsController struct {
 	config       ControllerConfig
@@ -72,10 +98,30 @@ func (o *windowsController) Install() error {
 	}
 	defer m.Disconnect()
 
+	var password string
+	if len(o.config.RunAs) > 0 {
+		v, ok := o.config.SystemSpecificOptions[PasswordOption]
+		if !ok {
+			return fmt.Errorf("the '%s' operating system specific option must be specified to run a windows service as a normal user", PasswordOption)
+		}
+
+		getPassFn, ok := v.(GetPassword)
+		if !ok {
+			return fmt.Errorf("the '%s' option must be a GetPassword function (type assertion failure)", PasswordOption)
+		}
+
+		password, err = getPassFn()
+		if err != nil {
+			return fmt.Errorf("failed to get password when installing daemon - %s", err.Error())
+		}
+	}
+
 	c := mgr.Config{
-		DisplayName: o.config.DaemonID,
-		Description: o.config.Description,
-		StartType:   o.winStartType,
+		DisplayName:      o.config.DaemonID,
+		Description:      o.config.Description,
+		StartType:        o.winStartType,
+		ServiceStartName: o.config.RunAs,
+		Password:         password,
 	}
 
 	exePath, err := os.Executable()
