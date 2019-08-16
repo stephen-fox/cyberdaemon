@@ -84,6 +84,10 @@ func (o StartType) string() string {
 	return string(o)
 }
 
+// SystemSpecificOption specifies the name of an operating system
+// specific option.
+type SystemSpecificOption string
+
 // Daemonizer provides methods for daemonizing your application code.
 //
 // Gotchas
@@ -172,6 +176,10 @@ type ControllerConfig struct {
 
 	// LogConfig configures the logging settings for the daemon.
 	LogConfig LogConfig
+
+	// SystemSpecificOptions is a map of operating system specific
+	// settings keys to values.
+	SystemSpecificOptions map[SystemSpecificOption]interface{}
 }
 
 // LogConfig configures the logging settings for the daemon.
