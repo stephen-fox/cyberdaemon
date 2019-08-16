@@ -147,7 +147,6 @@ type Controller interface {
 //
 // TODO: Additional daemon configuration:
 //  - Manually setting daemon executable file path
-//  - Support OS specific options
 //  - Optionally remove configuration file if install fails
 //  - Make the 'RunAs' field functional
 //  - Optionally require that the daemon be stopped after uninstall?
