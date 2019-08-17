@@ -59,15 +59,15 @@ else
     fi
 fi
 
-PROGRAM_NAME="` + serviceNamePlaceholder + `"
-PROGRAM_PATH="` + exePathPlaceholder + `"
-ARGUMENTS=""
-RUN_AS="` + runAsPlaceholder + `"
+PROGRAM_NAME='` + serviceNamePlaceholder + `'
+PROGRAM_PATH='` + exePathPlaceholder + `'
+ARGUMENTS=''
+RUN_AS='` + runAsPlaceholder + `'
 if [ -z "${RUN_AS}" ]
 then
-	RUN_AS="root"
+	RUN_AS='root'
 fi
-` + pidFilePathVar + `="` + pidFilePathPlaceholder + `"
+` + pidFilePathVar + `='` + pidFilePathPlaceholder + `'
 
 runlevel=$(set -- $(runlevel); eval "echo \$$#" )
 
