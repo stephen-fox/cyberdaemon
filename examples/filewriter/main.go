@@ -104,8 +104,7 @@ func main() {
 	}
 
 	// Daemonize the application.
-	daemon := cyberdaemon.NewDaemonizer(logConfig)
-	err := daemon.RunUntilExit(&application{
+	err := cyberdaemon.NewDaemonizer(logConfig).RunUntilExit(&application{
 		daemonID: daemonID,
 		stop:     make(chan chan struct{}),
 	})
