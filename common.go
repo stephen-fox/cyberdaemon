@@ -176,6 +176,10 @@ type ControllerConfig struct {
 	// LogConfig configures the logging settings for the daemon.
 	LogConfig LogConfig
 
+	// Arguments are the command line arguments to pass to the
+	// daemon's executable on startup.
+	Arguments []string
+
 	// SystemSpecificOptions is a map of operating system specific
 	// settings keys to values.
 	SystemSpecificOptions map[SystemSpecificOption]interface{}
