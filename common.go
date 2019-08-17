@@ -185,6 +185,14 @@ type ControllerConfig struct {
 	SystemSpecificOptions map[SystemSpecificOption]interface{}
 }
 
+func (o ControllerConfig) argumentsAsString() string {
+	if len(o.Arguments) == 0 {
+		return ""
+	}
+
+	return strings.Join(o.Arguments, " ")
+}
+
 // LogConfig configures the logging settings for the daemon.
 type LogConfig struct {
 	// UseNativeLogger specifies whether the operating system's native
