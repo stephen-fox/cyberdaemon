@@ -148,7 +148,6 @@ type Controller interface {
 // TODO: Additional daemon configuration:
 //  - Manually setting daemon executable file path
 //  - Optionally remove configuration file if install fails
-//  - Make the 'RunAs' field functional
 //  - Optionally require that the daemon be stopped after uninstall?
 //  - Allow user to specify CLI arguments
 type ControllerConfig struct {
