@@ -7,8 +7,10 @@ const (
 	// when the daemon's owner is logged in. The 'RunAs' field in the
 	// ControllerConfig must be set to the username that will own the
 	// daemon. This options does not take effect if the 'RunAs' field
-	// is not set. The following ControllerConfig example demonstrates
-	// how to specify this option:
+	// is not set. This option is not supported on System V.
+	//
+	// The following ControllerConfig example demonstrates how to
+	// specify this option:
 	//
 	//	current, err := user.Current()
 	//	if err != nil {
