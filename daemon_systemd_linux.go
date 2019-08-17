@@ -184,6 +184,11 @@ func (o *systemdDaemonizer) RunUntilExit(application Application) error {
 }
 
 func newSystemdController(exePath string, config ControllerConfig, systemctlPath string) (*systemdController, error) {
+	command := exePath
+	if len(config.Arguments) > 0 {
+		command = fmt.Sprintf("%s %s", exePath, config.argumentsAsString())
+	}
+
 	unitOptions := []*unit.UnitOption{
 		{
 			Section: "Unit",
@@ -198,7 +203,7 @@ func newSystemdController(exePath string, config ControllerConfig, systemctlPath
 		{
 			Section: "Service",
 			Name:    "ExecStart",
-			Value:   exePath,
+			Value:   command,
 		},
 		{
 			Section: "Service",
