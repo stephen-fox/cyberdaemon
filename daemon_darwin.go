@@ -129,14 +129,19 @@ func NewController(controllerConfig ControllerConfig) (Controller, error) {
 		runOnLoad = true
 	}
 
-	lconfig, err := launchctlutil.NewConfigurationBuilder().
+	builder := launchctlutil.NewConfigurationBuilder().
 		SetKind(kind).
 		SetLabel(controllerConfig.DaemonID).
 		SetRunAtLoad(runOnLoad).
 		SetCommand(exePath).
 		SetStandardErrorPath(logFilePath).
-		SetUserName(runAs).
-		Build()
+		SetUserName(runAs)
+
+	for i := range controllerConfig.Arguments {
+		builder.AddArgument(controllerConfig.Arguments[i])
+	}
+
+	lconfig, err := builder.Build()
 	if err != nil {
 		return nil, err
 	}
