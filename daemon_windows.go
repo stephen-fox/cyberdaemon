@@ -103,8 +103,7 @@ func (o *windowsController) Install() error {
 		return err
 	}
 
-	// TODO: Support custom arguments.
-	s, err := m.CreateService(o.config.DaemonID, exePath, c)
+	s, err := m.CreateService(o.config.DaemonID, exePath, c, o.config.Arguments...)
 	if err != nil {
 		return err
 	}

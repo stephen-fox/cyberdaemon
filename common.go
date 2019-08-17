@@ -149,7 +149,6 @@ type Controller interface {
 //  - Manually setting daemon executable file path
 //  - Optionally remove configuration file if install fails
 //  - Optionally require that the daemon be stopped after uninstall?
-//  - Allow user to specify CLI arguments
 type ControllerConfig struct {
 	// DaemonID is the string used to identify a daemon (for example,
 	// "MyApp"). The string must follow these rules:
@@ -176,9 +175,21 @@ type ControllerConfig struct {
 	// LogConfig configures the logging settings for the daemon.
 	LogConfig LogConfig
 
+	// Arguments are the command line arguments to pass to the
+	// daemon's executable on startup.
+	Arguments []string
+
 	// SystemSpecificOptions is a map of operating system specific
 	// settings keys to values.
 	SystemSpecificOptions map[SystemSpecificOption]interface{}
+}
+
+func (o ControllerConfig) argumentsAsString() string {
+	if len(o.Arguments) == 0 {
+		return ""
+	}
+
+	return strings.Join(o.Arguments, " ")
 }
 
 // LogConfig configures the logging settings for the daemon.
