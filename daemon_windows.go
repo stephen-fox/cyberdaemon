@@ -72,10 +72,30 @@ func (o *windowsController) Install() error {
 	}
 	defer m.Disconnect()
 
+	var password string
+	if len(o.config.RunAs) > 0 {
+		v, ok := o.config.SystemSpecificOptions[PasswordOption]
+		if !ok {
+			return fmt.Errorf("the '%s' operating system specific option must be specified to run a windows service as a normal user", PasswordOption)
+		}
+
+		getPassFn, ok := v.(GetPassword)
+		if !ok {
+			return fmt.Errorf("the '%s' option must be a GetPassword function (type assertion failure)", PasswordOption)
+		}
+
+		password, err = getPassFn()
+		if err != nil {
+			return fmt.Errorf("failed to get password when installing daemon - %s", err.Error())
+		}
+	}
+
 	c := mgr.Config{
-		DisplayName: o.config.DaemonID,
-		Description: o.config.Description,
-		StartType:   o.winStartType,
+		DisplayName:      o.config.DaemonID,
+		Description:      o.config.Description,
+		StartType:        o.winStartType,
+		ServiceStartName: o.config.RunAs,
+		Password:         password,
 	}
 
 	exePath, err := os.Executable()

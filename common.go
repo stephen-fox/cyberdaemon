@@ -84,6 +84,10 @@ func (o StartType) string() string {
 	return string(o)
 }
 
+// SystemSpecificOption specifies the name of an operating system
+// specific option.
+type SystemSpecificOption string
+
 // Daemonizer provides methods for daemonizing your application code.
 //
 // Gotchas
@@ -143,10 +147,9 @@ type Controller interface {
 //
 // TODO: Additional daemon configuration:
 //  - Manually setting daemon executable file path
-//  - Support OS specific options
 //  - Optionally remove configuration file if install fails
-//  - Make the 'RunAs' field functional
 //  - Optionally require that the daemon be stopped after uninstall?
+//  - Allow user to specify CLI arguments
 type ControllerConfig struct {
 	// DaemonID is the string used to identify a daemon (for example,
 	// "MyApp"). The string must follow these rules:
@@ -172,6 +175,10 @@ type ControllerConfig struct {
 
 	// LogConfig configures the logging settings for the daemon.
 	LogConfig LogConfig
+
+	// SystemSpecificOptions is a map of operating system specific
+	// settings keys to values.
+	SystemSpecificOptions map[SystemSpecificOption]interface{}
 }
 
 // LogConfig configures the logging settings for the daemon.

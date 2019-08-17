@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"os/user"
 	"path"
 	"strings"
 	"syscall"
@@ -104,17 +105,17 @@ func NewController(controllerConfig ControllerConfig) (Controller, error) {
 
 	// TODO: Allow user to provide reverse DNS prefix using OS option.
 	if strings.Count(controllerConfig.DaemonID, ".") < 2 {
-		return nil, fmt.Errorf("daemon ID must be in reverse DNS format on macOS")
+		return nil, fmt.Errorf("daemon ID must be in reverse DNS format on macOS (e.g., net.website.MyApp)")
 	}
 
-	var logFilePath string
+	kind, setRunAs, logFilePath, err := runSettings(controllerConfig)
+	if err != nil {
+		return nil, err
+	}
 
-	if controllerConfig.LogConfig.UseNativeLogger {
-		// TODO: Support user, or system logs.
-		// TODO: Use a friendly name for the log directory
-		//  and file name.
-		logFilePath = path.Join(os.Getenv("HOME"), "Library", "Logs",
-			controllerConfig.DaemonID, controllerConfig.DaemonID+ ".log")
+	var runAs string
+	if setRunAs {
+		runAs = controllerConfig.RunAs
 	}
 
 	// Caveat: launchd does not have any concept similar to
@@ -128,13 +129,13 @@ func NewController(controllerConfig ControllerConfig) (Controller, error) {
 		runOnLoad = true
 	}
 
-	// TODO: Make macOS options customizable.
 	lconfig, err := launchctlutil.NewConfigurationBuilder().
-		SetKind(launchctlutil.UserAgent).
+		SetKind(kind).
 		SetLabel(controllerConfig.DaemonID).
 		SetRunAtLoad(runOnLoad).
 		SetCommand(exePath).
 		SetStandardErrorPath(logFilePath).
+		SetUserName(runAs).
 		Build()
 	if err != nil {
 		return nil, err
@@ -145,6 +146,41 @@ func NewController(controllerConfig ControllerConfig) (Controller, error) {
 		stderrLogFilePath: logFilePath,
 		logConfig:         controllerConfig.LogConfig,
 	}, nil
+}
+
+// runSettings returns the launchd service kind, whether the run as username
+// should be specified in the launchd config, and the log file path.
+func runSettings(config ControllerConfig) (launchctlutil.Kind, bool, string, error) {
+	// TODO: Use a friendly name for the log directory and file name.
+	logPathSuffix := fmt.Sprintf("Library/Logs/%s/%s.log",
+		config.DaemonID, config.DaemonID)
+
+	if len(config.RunAs) == 0 {
+		return launchctlutil.Daemon, false, path.Join("/", logPathSuffix), nil
+	}
+
+	current, err := user.Current()
+	if err != nil {
+		return launchctlutil.Daemon, false, "",
+			fmt.Errorf("failed to get current user - %s", err.Error())
+	}
+
+	_, onlyRunWhenLoggedIn := config.SystemSpecificOptions[RunOnlyWhenLoggedIn]
+	if onlyRunWhenLoggedIn {
+		if config.RunAs == current.Username {
+			return launchctlutil.UserAgent, false, path.Join(current.HomeDir, logPathSuffix), nil
+		}
+		return launchctlutil.Daemon, false, "",
+			fmt.Errorf("the '%s' option cannot be used when the curret user is not the RunAs user",
+				RunOnlyWhenLoggedIn)
+	}
+
+	runAs, lookUpErr := user.Lookup(config.RunAs)
+	if lookUpErr != nil {
+		return launchctlutil.Daemon, true, path.Join("/Users", config.RunAs, logPathSuffix), nil
+	}
+
+	return launchctlutil.Daemon, true, path.Join(runAs.HomeDir, logPathSuffix), nil
 }
 
 func NewDaemonizer(logConfig LogConfig) Daemonizer {
