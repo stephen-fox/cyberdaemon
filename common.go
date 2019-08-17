@@ -25,9 +25,42 @@ package cyberdaemon
 // the daemon. This was implemented in the Application interface to make it
 // a compile-time error if developers try to build for Windows in addition
 // to other operating systems.
+//
+// Implementation details
+//
+// System V (init.d):
+// System V is one of the more complicated daemon implementations in this
+// library. This is due to Go's inability to fork, and the tight-knit nature of
+// the daemon management script and its corresponding daemon application.
+//
+// System V works by using a script (typically written in Bourne Shell) to
+// manage the daemon. This script is usually stored in '/etc/init.d'. System V
+// expects the init.d script to exit after starting the daemon process. This is
+// typically implemented using the 'fork' system call, which spawns a new
+// process with only one thread. Go's runtime requires multiple threads to run
+// (many Go programs rely on more than one thread anyways). An alternate
+// solution is to do what is called "fork exec". This means the Go program runs
+// a new instance of itself, and the original instance exits. Implementing this
+// is tricky because the library cannot rely on settings files, command line
+// arguments, or environment variables to determine if init.d started it. Doing
+// so would cross an implementation line that would require implementers to
+// bake the special business logic into their own independent init.d scripts.
+//
+// This library's System V daemon implementation checks the parent PID's
+// "/proc/<pid>/cmdline" to determine:
+// 	- Is init.d the parent process?
+// 	- If so, where is the init.d script stored?
+//
+// If started by init.d, the daemon will attempt to parse the PID file path
+// from the init.d script. A PID file is used to store the PID of the daemon
+// so that the management script can easily determine the status of the daemon.
+// Both the init.d script and the daemon need to know where this file is
+// located (the script so that it can read it, and the daemon so that it can
+// write its PID to it). If the daemon cannot find the PID file path in the
+// init.d script, it uses a sane default PID file path.
 type Daemonizer interface {
-	// RunUntilExit runs the provided Application until the daemon
-	// is instructed to quit.
+	// RunUntilExit runs the provided Application until the daemon is
+	// instructed to quit. This method blocks until the daemon exits.
 	RunUntilExit(Application) error
 }
 

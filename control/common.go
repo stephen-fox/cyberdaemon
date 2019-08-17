@@ -143,7 +143,10 @@ type ControllerConfig struct {
 	// If left unset, the daemon must be started manually.
 	StartType StartType
 
-	// LogConfig configures the logging settings for the daemon.
+	// LogConfig, in this context, configures the operating system's
+	// daemon logging configuration. Some operating systems can
+	// store this separately from the daemon executable (macOS,
+	// for example).
 	LogConfig cyberdaemon.LogConfig
 
 	// Arguments are the command line arguments to pass to the
