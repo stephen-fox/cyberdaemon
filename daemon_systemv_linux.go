@@ -61,7 +61,7 @@ fi
 
 PROGRAM_NAME='` + serviceNamePlaceholder + `'
 PROGRAM_PATH='` + exePathPlaceholder + `'
-ARGUMENTS=''
+ARGUMENTS='` + argumentsPlaceholder + `'
 RUN_AS='` + runAsPlaceholder + `'
 if [ -z "${RUN_AS}" ]
 then
@@ -274,6 +274,7 @@ exit $?
 	shortDescriptionPlaceholder = placeholderDelim + "SHORT_DESCRIPTION" + placeholderDelim
 	descriptionPlaceholder      = placeholderDelim + "DESCRIPTION" + placeholderDelim
 	exePathPlaceholder          = placeholderDelim + "EXE_PATH" + placeholderDelim
+	argumentsPlaceholder        = placeholderDelim + "ARGUMENTS" + placeholderDelim
 	logFilePathPlaceholder      = placeholderDelim + "LOG_FILE_PATH" + placeholderDelim
 	pidFilePathPlaceholder      = placeholderDelim + "PID_FILE_PATH" + placeholderDelim
 	runAsPlaceholder            = placeholderDelim + "RUN_AS" + placeholderDelim
@@ -631,6 +632,7 @@ func newSystemvController(exePath string, config ControllerConfig, serviceExePat
 		shortDescriptionPlaceholder, fmt.Sprintf("%s daemon.", config.DaemonID),
 		descriptionPlaceholder, config.Description,
 		exePathPlaceholder, exePath,
+		argumentsPlaceholder, config.argumentsAsString(),
 		runAsPlaceholder, config.RunAs,
 		logFilePathPlaceholder, logFilePath,
 		pidFilePathPlaceholder, defaultPidFilePath(config.DaemonID))
