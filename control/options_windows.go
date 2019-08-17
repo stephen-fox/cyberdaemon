@@ -1,4 +1,4 @@
-package cyberdaemon
+package control
 
 const (
 	// PasswordOption is used to specify the password for a user when

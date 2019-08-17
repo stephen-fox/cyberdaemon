@@ -1,6 +1,6 @@
 // +build !windows
 
-package cyberdaemon
+package control
 
 const (
 	// RunOnlyWhenLoggedIn specifies that the daemon should run only

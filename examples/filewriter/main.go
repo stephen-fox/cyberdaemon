@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/stephen-fox/cyberdaemon"
+	"github.com/stephen-fox/cyberdaemon/control"
 )
 
 const (
@@ -55,7 +56,7 @@ The daemon can be uninstalled by running:
 func main() {
 	command := flag.String(daemonCommandArg, "",
 		"The daemon control command to execute. This can be the following:\n" +
-			cyberdaemon.SupportedCommandsString())
+			control.SupportedCommandsString())
 	help := flag.Bool("h", false, "Displays this help page")
 
 	flag.Parse()
@@ -80,17 +81,17 @@ func main() {
 	// If the user provided a control command on the command line,
 	// execute it and then exit.
 	if len(*command) > 0 {
-		controller, err := cyberdaemon.NewController(cyberdaemon.ControllerConfig{
+		controller, err := control.NewController(control.ControllerConfig{
 			DaemonID:    daemonID,
 			Description: description,
-			StartType:   cyberdaemon.StartImmediately,
+			StartType:   control.StartImmediately,
 			LogConfig:   logConfig,
 		})
 		if err != nil {
 			log.Fatalln(err.Error())
 		}
 
-		output, err := cyberdaemon.Execute(cyberdaemon.Command(*command), controller)
+		output, err := control.Execute(control.Command(*command), controller)
 		if err != nil {
 			log.Fatalln(err.Error())
 		}
@@ -103,8 +104,7 @@ func main() {
 	}
 
 	// Daemonize the application.
-	daemon := cyberdaemon.NewDaemonizer(logConfig)
-	err := daemon.RunUntilExit(&application{
+	err := cyberdaemon.NewDaemonizer(logConfig).RunUntilExit(&application{
 		daemonID: daemonID,
 		stop:     make(chan chan struct{}),
 	})
