@@ -2,9 +2,9 @@ package cyberdaemon
 
 const (
 	// PasswordOption is used to specify the password for a user when
-	// installing a daemon that will run as that user. Here is an
-	// example ControllerConfig that reads the user's password from
-	// an environment variable:
+	// installing a daemon that will run as that user. The following
+	// example ControllerConfig demonstrates this option by reading
+	// the user's password from an environment variable:
 	//
 	//	config := cyberdaemon.ControllerConfig{
 	//		DaemonID:              "test",
