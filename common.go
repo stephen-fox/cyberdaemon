@@ -149,7 +149,6 @@ type Controller interface {
 //  - Manually setting daemon executable file path
 //  - Optionally remove configuration file if install fails
 //  - Optionally require that the daemon be stopped after uninstall?
-//  - Allow user to specify CLI arguments
 type ControllerConfig struct {
 	// DaemonID is the string used to identify a daemon (for example,
 	// "MyApp"). The string must follow these rules:
