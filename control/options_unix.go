@@ -17,12 +17,12 @@ const (
 	//		return err
 	//	}
 	//
-	//	config := cyberdaemon.ControllerConfig{
+	//	config := control.ControllerConfig{
 	//		DaemonID:              "test",
 	//		Description:           "I need my guys. They're the best.",
 	//		RunAs:                 current.Username,
-	//		SystemSpecificOptions: map[cyberdaemon.SystemSpecificOption]interface{}{
-	//			cyberdaemon.RunOnlyWhenLoggedIn: "",
+	//		SystemSpecificOptions: map[control.SystemSpecificOption]interface{}{
+	//			control.RunOnlyWhenLoggedIn: "",
 	//		},
 	//	}
 	RunOnlyWhenLoggedIn SystemSpecificOption = "run_only_when_logged_in"

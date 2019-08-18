@@ -6,12 +6,12 @@ const (
 	// example ControllerConfig demonstrates this option by reading
 	// the user's password from an environment variable:
 	//
-	//	config := cyberdaemon.ControllerConfig{
+	//	config := control.ControllerConfig{
 	//		DaemonID:              "test",
 	//		Description:           "I need my guys. They're the best.",
 	//		RunAs:                 ".\\stephen",
-	//		SystemSpecificOptions: map[cyberdaemon.SystemSpecificOption]interface{}{
-	//			cyberdaemon.PasswordOption: cyberdaemon.GetPassword(func() (string, error) {
+	//		SystemSpecificOptions: map[control.SystemSpecificOption]interface{}{
+	//			control.PasswordOption: control.GetPassword(func() (string, error) {
 	//				p, ok := os.LookupEnv("WHYARETHEYTHEBEST")
 	//				if !ok {
 	//					return "", fmt.Errorf("password environment variable was not set")
