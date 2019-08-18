@@ -65,7 +65,7 @@ func (o *darwinController) Stop() error {
 }
 
 func NewController(controllerConfig ControllerConfig) (Controller, error) {
-	exePath, err := os.Executable()
+	err := controllerConfig.Validate()
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func NewController(controllerConfig ControllerConfig) (Controller, error) {
 		SetKind(kind).
 		SetLabel(controllerConfig.DaemonID).
 		SetRunAtLoad(runOnLoad).
-		SetCommand(exePath).
+		SetCommand(controllerConfig.ExePath).
 		SetStandardErrorPath(logFilePath).
 		SetUserName(runAs)
 

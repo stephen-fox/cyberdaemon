@@ -380,7 +380,12 @@ func (o *systemvController) Stop() error {
 	return nil
 }
 
-func newSystemvController(exePath string, config ControllerConfig, serviceExePath string, isRedHat bool) (*systemvController, error) {
+func newSystemvController(config ControllerConfig, serviceExePath string, isRedHat bool) (*systemvController, error) {
+	err := config.Validate()
+	if err != nil {
+		return nil, err
+	}
+
 	var logFilePath string
 
 	if config.LogConfig.UseNativeLogger {
@@ -393,7 +398,7 @@ func newSystemvController(exePath string, config ControllerConfig, serviceExePat
 	replacer := strings.NewReplacer(serviceNamePlaceholder, config.DaemonID,
 		shortDescriptionPlaceholder, fmt.Sprintf("%s daemon.", config.DaemonID),
 		descriptionPlaceholder, config.Description,
-		exePathPlaceholder, exePath,
+		exePathPlaceholder, config.ExePath,
 		argumentsPlaceholder, config.argumentsAsString(),
 		runAsPlaceholder, config.RunAs,
 		logFilePathPlaceholder, logFilePath,
@@ -405,7 +410,6 @@ func newSystemvController(exePath string, config ControllerConfig, serviceExePat
 	}
 
 	var enableCliToolPath string
-	var err error
 	if isRedHat {
 		enableCliToolPath, err = osutil.ChkconfigPath()
 	} else {

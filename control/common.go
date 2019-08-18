@@ -131,6 +131,13 @@ type ControllerConfig struct {
 	// Description is a short blurb describing your application.
 	Description string
 
+	// ExePath is the path to the daemon's executable.
+	ExePath string
+
+	// Arguments are the command line arguments to pass to the
+	// daemon's executable on startup.
+	Arguments []string
+
 	// RunAs is the user to run the daemon as.
 	//
 	// If left unset, the daemon will run as the following:
@@ -149,13 +156,17 @@ type ControllerConfig struct {
 	// for example).
 	LogConfig cyberdaemon.LogConfig
 
-	// Arguments are the command line arguments to pass to the
-	// daemon's executable on startup.
-	Arguments []string
-
 	// SystemSpecificOptions is a map of operating system specific
 	// settings keys to values.
 	SystemSpecificOptions map[SystemSpecificOption]interface{}
+}
+
+func (o ControllerConfig) Validate() error {
+	if len(o.ExePath) == 0 {
+		return fmt.Errorf("executable path must be provided to controller config")
+	}
+
+	return nil
 }
 
 func (o ControllerConfig) argumentsAsString() string {

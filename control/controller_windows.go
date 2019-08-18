@@ -6,7 +6,6 @@ import (
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"
 	"golang.org/x/sys/windows/svc/mgr"
-	"os"
 	"strconv"
 	"time"
 )
@@ -95,12 +94,7 @@ func (o *windowsController) Install() error {
 		Password:         password,
 	}
 
-	exePath, err := os.Executable()
-	if err != nil {
-		return err
-	}
-
-	s, err := m.CreateService(o.config.DaemonID, exePath, c, o.config.Arguments...)
+	s, err := m.CreateService(o.config.DaemonID, o.config.ExePath, c, o.config.Arguments...)
 	if err != nil {
 		return err
 	}
@@ -199,6 +193,11 @@ func (o *windowsController) Stop() error {
 }
 
 func NewController(controllerConfig ControllerConfig) (Controller, error) {
+	err := controllerConfig.Validate()
+	if err != nil {
+		return nil, err
+	}
+
 	var winStartType uint32
 	switch controllerConfig.StartType {
 	case StartImmediately, StartOnLoad:

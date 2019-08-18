@@ -81,9 +81,15 @@ func main() {
 	// If the user provided a control command on the command line,
 	// execute it and then exit.
 	if len(*command) > 0 {
+		exePath, err := os.Executable()
+		if err != nil {
+			log.Fatalf("failed to get executable path - %s", err.Error())
+		}
+
 		controller, err := control.NewController(control.ControllerConfig{
 			DaemonID:    daemonID,
 			Description: description,
+			ExePath:     exePath,
 			StartType:   control.StartImmediately,
 			LogConfig:   logConfig,
 		})

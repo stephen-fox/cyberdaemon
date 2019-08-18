@@ -146,10 +146,15 @@ func (o *systemdController) Stop() error {
 	return nil
 }
 
-func newSystemdController(exePath string, config ControllerConfig, systemctlPath string) (*systemdController, error) {
-	command := exePath
+func newSystemdController(config ControllerConfig, systemctlPath string) (*systemdController, error) {
+	err := config.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	command := config.ExePath
 	if len(config.Arguments) > 0 {
-		command = fmt.Sprintf("%s %s", exePath, config.argumentsAsString())
+		command = fmt.Sprintf("%s %s", config.ExePath, config.argumentsAsString())
 	}
 
 	unitOptions := []*unit.UnitOption{
