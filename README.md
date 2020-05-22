@@ -64,7 +64,7 @@ distinctly separate configuration. Not all operating systems function this way
 (I am looking at you, Windows). However, I thought it was worth separating the
 "how do I daemonize my app" code from the "how do I control my daemon" code for
 cleanliness, and to highlight implementation intent. As shown in the
-example(s), there is not reason why you cannot use both packages together.
+example(s), there is no reason why you cannot use both packages together.
 Another reason I prefer this design is that it should stop me from making the
 daemonization code depend on the control code (via go's circular dependency
 compile check).
